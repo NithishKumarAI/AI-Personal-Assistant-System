@@ -251,3 +251,181 @@ Next → Notion (storage)
 * Integrate Notion API
 * Store each processed entry with timestamp
 * Build persistent daily diary system
+
+## Day 3 — Notion Integration & End-to-End Pipeline
+
+### What I Did
+
+* Implemented **Notion API integration** to store diary entries
+* Created a dedicated module: `core/notion.py`
+* Connected full pipeline:
+
+  * UI → LLM → Python (date/time) → Notion database
+
+---
+
+### Steps Followed
+
+#### 1. Created Notion Integration
+
+* Generated **Internal Integration Token**
+* Understood how authentication works using API keys
+
+---
+
+#### 2. Designed Notion Database
+
+* Created a **full-page database**: `AI Diary`
+* Final schema:
+
+  * `Content` → Title (main diary text)
+  * `Date` → Date type
+  * `Time` → Text type
+* Learned that:
+
+  * Title column is mandatory and cannot be removed
+  * It can store full diary content
+
+---
+
+#### 3. Connected Integration to Database
+
+* Shared database access with the integration
+* Understood permission model:
+
+  > APIs cannot access data unless explicitly shared
+
+---
+
+#### 4. Secured Credentials using `.env`
+
+* Stored:
+
+  * `NOTION_API_KEY`
+  * `DATABASE_ID`
+* Used `python-dotenv` to load environment variables
+* Added `.env` to `.gitignore`
+
+---
+
+#### 5. Built Notion API Module (`notion.py`)
+
+* Implemented POST request to:
+
+  ```
+  https://api.notion.com/v1/pages
+  ```
+* Structured JSON payload:
+
+  * `parent` → database ID
+  * `properties` → column data mapping
+
+---
+
+#### 6. Understood API Structure
+
+Key learning:
+
+* Notion requires **strict JSON schema**
+* Property types must match:
+
+  * Title → `title`
+  * Date → `date`
+  * Text → `rich_text`
+
+---
+
+#### 7. Isolated Testing (Important Step)
+
+* Created `test_notion.py`
+* Sent manual test entry before integrating with UI
+* Verified:
+
+  * API works independently
+  * Data correctly inserted into Notion
+
+---
+
+#### 8. Integrated with Main App
+
+* Connected `add_entry_to_notion()` inside `app.py`
+* Ensured:
+
+  * LLM output → stored
+  * Date/time generated once and reused
+
+---
+
+### Issues Faced
+
+#### 1. API not working initially
+
+* Cause: Streamlit not refreshed
+* Fix: Restarted Streamlit server
+
+---
+
+#### 2. Confusion in JSON structure
+
+* Initially unclear how nested dictionaries map to Notion fields
+* Resolved by understanding:
+
+  > JSON = structured instruction for API
+
+---
+
+#### 3. Multiple datetime calls
+
+* Issue:
+
+  * Different timestamps generated at different calls
+* Fix:
+
+  * Introduced single `now = datetime.now()` source
+
+---
+
+### Final Working Flow
+
+```text
+User Input
+   ↓
+LLM (clean + normalize)
+   ↓
+Python (single timestamp)
+   ↓
+Notion API (store entry)
+   ↓
+Database row created
+```
+
+---
+
+### What I Achieved
+
+* Built a **persistent storage system**
+* Established **modular architecture**:
+
+  * UI layer
+  * AI processing layer
+  * storage layer
+* Successfully implemented a **real API integration**
+
+---
+
+### Key Learning
+
+* APIs require **exact structure and strict typing**
+* Always test modules independently before integration
+* Separate:
+
+  * logic (Python)
+  * intelligence (LLM)
+  * storage (Notion)
+
+---
+
+### Next Step
+
+* Add **voice input (Whisper)**
+* Then implement **RAG-based retrieval system**
