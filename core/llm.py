@@ -1,31 +1,45 @@
 import requests
-from click import prompt
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
 def process_input(text):
+    if not text or not text.strip():
+        return "No input provided."
     prompt = f"""
-Rewrite the following input as a personal diary entry.
+    You are NOT a chatbot.
 
-Rules:
-- Preserve the full meaning of the input
-- Remove repeated or unnecessary phrases
-- Do NOT add any new information
-- Do NOT remove important details
-- Keep it concise but complete
-- Write in a natural personal diary style
-- Do NOT add date or time
-- Do NOT give advice
+    You ONLY return cleaned text.
 
-Input:
-{text}
+    STRICT:
+    - Output ONLY the cleaned text
+    - Do NOT add any heading
+    - Do NOT say "Here is"
+    - Do NOT say "Cleaned text"
+    - Do NOT add explanations
+    - Do NOT add extra lines
+    - Do NOT behave like an assistant
+
+    Write in simple, natural language:
+    - Keep same meaning
+    - Keep same details
+    - Remove repetition
+    - Fix grammar
+    - Keep it informal and natural
+
+    Input:
+    {text}
+
+    Cleaned text (only output this):
     """
     response = requests.post(
         OLLAMA_URL,
     json={
         "model" : "llama3",
         "prompt" : prompt,
-        "stream" : False
+        "stream" : False,
+        "options" : {
+            "temperature": 0
+        }
     })
     data = response.json()
     return data["response"]
