@@ -13,6 +13,6 @@ def record_audio(filename="temp_audio.wav", duration=30, fs=16000):
     write(filename,fs,audio)
     print("done")
 
-def transcribe_audio(filename="input.wav"):
+def transcribe_audio(filename="temp_audio.wav"):
     result = model.transcribe(filename,fp16=False)
     return result['text']

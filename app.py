@@ -41,7 +41,8 @@ if st.button("submit"):
     st.write(datetime.now().strftime("%B %d, %Y -- %H:%M"))
     st.write(clean_content)
 
-    add_entry_to_notion(clean_content,today,time_now)
+    add_entry_to_notion(clean_content, today, time_now)
     st.success("Content stored in Notion")
+
 
     st.session_state.voice_text = ""
