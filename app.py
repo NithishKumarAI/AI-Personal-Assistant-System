@@ -4,6 +4,7 @@ from core.llm import process_input
 from core.notion import add_entry_to_notion
 from datetime import datetime
 from core.voice import record_audio, transcribe_audio
+from rag.fetch_data import fetch_todays_entries
 
 st.title("AI Personal Assistant")
 
@@ -46,3 +47,16 @@ if st.button("submit"):
 
 
     st.session_state.voice_text = ""
+
+if st.button("Generate Diary"):
+    st.write("Generating Diary...")
+
+    logs = fetch_todays_entries()
+
+    if not logs:
+        st.warning("No entries found.")
+    else:
+        st.write("logs for today:")
+
+        for log in logs:
+            st.write("-",log)
