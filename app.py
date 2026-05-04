@@ -5,6 +5,7 @@ from core.notion import add_entry_to_notion
 from datetime import datetime
 from core.voice import record_audio, transcribe_audio
 from rag.fetch_data import fetch_todays_entries
+from rag.combine_logs import combine_logs
 
 st.title("AI Personal Assistant")
 
@@ -57,6 +58,5 @@ if st.button("Generate Diary"):
         st.warning("No entries found.")
     else:
         st.write("logs for today:")
-
-        for log in logs:
-            st.write("-",log)
+        combined = combine_logs(logs)
+        st.text(combined)

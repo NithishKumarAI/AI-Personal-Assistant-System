@@ -34,7 +34,7 @@ def fetch_todays_entries():
         }
     }
 
-    response = requests.post(url, headers = headers, data = payload)
+    response = requests.post(url, headers = headers, json = payload)
 
     data = response.json()
 
