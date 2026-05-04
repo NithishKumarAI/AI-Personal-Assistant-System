@@ -6,6 +6,8 @@ from datetime import datetime
 from core.voice import record_audio, transcribe_audio
 from rag.fetch_data import fetch_todays_entries
 from rag.combine_logs import combine_logs
+from rag.diary_generator import generate_diary
+from core.notion import add_daily_diary
 
 st.title("AI Personal Assistant")
 
@@ -57,6 +59,18 @@ if st.button("Generate Diary"):
     if not logs:
         st.warning("No entries found.")
     else:
-        st.write("logs for today:")
         combined = combine_logs(logs)
-        st.text(combined)
+        diary = generate_diary(combined)
+        st.write(diary)
+        from datetime import datetime
+
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        response = add_daily_diary(diary, today)
+
+        #st.write("Notion response:", response)
+
+        if response.get("object") == "error":
+            st.error("Failed to save diary")
+        else:
+            st.success("Diary saved successfully")

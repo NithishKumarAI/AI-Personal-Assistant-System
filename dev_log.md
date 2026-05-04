@@ -429,3 +429,119 @@ Database row created
 
 * Add **voice input (Whisper)**
 * Then implement **RAG-based retrieval system**
+## Day 4 — Voice Input (Whisper) Integration & Real-world Input Handling
+
+### What I Did
+
+* Integrated **Whisper (speech-to-text)** into the system
+* Created `core/voice.py` module
+* Enabled:
+
+  * Record audio (30 seconds)
+  * Convert speech → text
+* Connected voice input directly to the existing pipeline
+
+---
+
+### System Flow (updated)
+
+User Voice → Whisper → Text → LLM → Notion
+
+---
+
+### Issues Faced
+
+#### 1. FFmpeg dependency error
+
+* Whisper failed to process audio
+* Root cause:
+
+  * FFmpeg not installed / not in PATH
+
+**Fix:**
+
+* Installed FFmpeg
+* Added `/bin` to system PATH
+
+---
+
+#### 2. FFmpeg not "opening"
+
+* Tried to click `.exe`
+* Misunderstanding:
+
+  * FFmpeg is CLI tool, not GUI
+
+---
+
+#### 3. Whisper using CPU
+
+* Warning:
+* Not a failure — fallback to FP32
+
+---
+
+#### 4. Old audio repeating (major bug)
+
+* Voice output was same as previous input
+
+**Root cause:**
+
+* File caching / overwriting issue
+
+**Fix:**
+
+* Ensured new recording overwrites file properly
+
+---
+
+### Key Learning
+
+* External tools (FFmpeg) are critical dependencies
+* ML models often require system-level setup
+* Debugging = environment + code, not just code
+
+---
+
+### Outcome
+
+* Fully working **voice input pipeline**
+* System now supports:
+
+* Text input
+* Voice input
+
+---
+
+## Day 5 — RAG Foundation, Diary Generation & Notion Debugging
+
+### What I Did
+
+* Implemented **data retrieval (RAG base layer)**
+* Built:
+
+* `fetch_data.py` → fetch today's logs
+* `combine_logs.py` → merge logs
+* `diary_generator.py` → generate diary using LLM
+* Created second database:
+
+* `Daily Diary`
+
+---
+
+### System Flow (final architecture)
+
+```text
+User Input (Text/Voice)
+      ↓
+LLM (clean input)
+      ↓
+Notion (log storage)
+      ↓
+Fetch today's logs
+      ↓
+Combine logs
+      ↓
+LLM (generate diary)
+      ↓
+Notion (Daily Diary DB)

@@ -33,13 +33,12 @@ def process_input(text):
     """
     response = requests.post(
         OLLAMA_URL,
-    json={
-        "model" : "llama3",
-        "prompt" : prompt,
-        "stream" : False,
-        "options" : {
-            "temperature": 0
-        }
-    })
+        json={
+            "model": "llama3",
+            "prompt": prompt,
+            "stream": False
+        },
+        timeout=60
+    )
     data = response.json()
     return data["response"]
