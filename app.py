@@ -8,12 +8,14 @@ from rag.fetch_data import fetch_todays_entries
 from rag.combine_logs import combine_logs
 from rag.diary_generator import generate_diary
 from core.notion import add_daily_diary
+from rag.fetch_data import fetch_diary_by_date
 
 st.title("AI Personal Assistant")
 
 if "voice_text" not in st.session_state:
     st.session_state.voice_text = ""
 
+st.subheader("✍️ Today's Entry")
 if st.button("🎤 Record audio for 30 seconds"):
     st.write("recording... speak now...")
     record_audio(duration=30)
@@ -30,7 +32,13 @@ user_input = st.text_area(
      value=st.session_state.voice_text
 )
 
-if st.button("submit"):
+col1, col2 = st.columns(2)
+with col1:
+    submit_clicked = st.button("Submit")
+with col2:
+    generate_clicked = st.button("Generate Diary")
+
+if submit_clicked:
 
     if not user_input.strip():
         st.warning("Please record or type something.")
@@ -51,7 +59,7 @@ if st.button("submit"):
 
     st.session_state.voice_text = ""
 
-if st.button("Generate Diary"):
+if generate_clicked:
     st.write("Generating Diary...")
 
     logs = fetch_todays_entries()
@@ -74,3 +82,12 @@ if st.button("Generate Diary"):
             st.error("Failed to save diary")
         else:
             st.success("Diary saved successfully")
+
+with st.sidebar:
+    st.header("📅 Past Diaries")
+    selected_date = st.date_input("Select a Date")
+    diary = fetch_diary_by_date(selected_date)
+
+    with st.container():
+        st.subheader("Diary")
+        st.write(diary)

@@ -47,3 +47,33 @@ def fetch_todays_entries():
         except:
             continue
     return logs
+
+def fetch_diary_by_date(selected_date):
+
+    url = f"https://api.notion.com/v1/databases/{os.getenv('DAILY_DIARY_DATABASE_ID')}/query"
+    headers = {
+        "Authorization": f"Bearer {os.getenv('NOTION_API_KEY')}",
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "filter": {
+            "property": "Date",
+            "date": {
+                "equals": str(selected_date)
+            }
+        }
+    }
+    response = requests.post(
+        url,
+        headers=headers,
+        json=payload
+    )
+    data = response.json()
+    results = data.get("results", [])
+    #data["results"]
+    if not results:
+        return "No diary found for this date."
+    item = results[0]
+    diary_text = item["properties"]["Diary"]["title"][0]["text"]["content"]
+    return diary_text
