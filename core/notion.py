@@ -79,3 +79,35 @@ def add_daily_diary(content, date):
 
     response = requests.post(url, headers=headers, json=data)
     return response.json()
+
+def update_daily_diary(page_id, content):
+
+    url = f"https://api.notion.com/v1/pages/{page_id}"
+
+    headers = {
+        "Authorization": f"Bearer {NOTION_API_KEY}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+
+    data = {
+        "properties": {
+            "Diary": {
+                "title": [
+                    {
+                        "text": {
+                            "content": content
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+    response = requests.patch(
+        url,
+        headers=headers,
+        json=data
+    )
+
+    return response.json()
