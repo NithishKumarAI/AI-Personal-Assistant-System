@@ -22,6 +22,7 @@ for k, v in [
     ("voice_text",    ""),    # Holds the Whisper transcription after recording
     ("clean_content", ""),    # Holds the LLM-processed entry after Submit
     ("entry_ts",      ""),    # Holds the timestamp string shown with the saved entry
+    ("model_used", ""),
     ("selected_date", None),  # Holds the date selected in the Past Diaries tab
 ]:
     if k not in st.session_state:
@@ -94,7 +95,6 @@ with tab_today:
         placeholder="Write freely or speak — this is your space…",
         label_visibility="collapsed",
     )
-
     # ── Action buttons ────────────────────────────────────────────────────────
     # Two buttons side by side using columns.
     # col3 is an empty spacer column so buttons don't stretch full width.
@@ -120,8 +120,12 @@ with tab_today:
             st.warning("Write or record something first.")
         else:
             with st.spinner("Processing…"):
-                # process_input sends the raw text to the LLM for cleanup/formatting
-                clean_content = process_input(user_input)
+
+                result = process_input(user_input)
+
+                clean_content = result["text"]
+
+                model_used = result["model_used"]
 
             # Format date and time strings for Notion and the display timestamp
             today_str = now.strftime("%Y-%m-%d")       # e.g. "2026-05-10"
@@ -132,7 +136,7 @@ with tab_today:
             # so they persist after Streamlit reruns on the next interaction
             st.session_state.clean_content = clean_content
             st.session_state.entry_ts      = disp_ts
-
+            st.session_state.model_used = model_used
             # Save the entry to Notion — this calls the Notion API
             add_entry_to_notion(clean_content, today_str, time_now)
 
@@ -144,6 +148,7 @@ with tab_today:
     if st.session_state.clean_content:
         st.divider()
         st.caption(f"✦ {st.session_state.entry_ts}")   # Small timestamp above the entry
+        st.caption(f"⚡ Model Used: {st.session_state.model_used}")
         st.write(st.session_state.clean_content)        # The LLM-processed entry text
 
     # ── Generate Diary logic ──────────────────────────────────────────────────
