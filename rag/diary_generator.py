@@ -1,10 +1,7 @@
-import requests
+from core.model_router import generate_with_fallback
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
 
-def generate_diary(text):
-
-    prompt = f"""
+DIARY_PROMPT = """
 You are writing a personal diary.
 
 Rules:
@@ -22,18 +19,7 @@ Logs:
 Diary:
 """
 
-    response = requests.post(
-        OLLAMA_URL,
-        json={
-            "model": "llama3",
-            "prompt": prompt,
-            "stream": False,
-            "options": {"temperature": 0.6}
-        },
-        timeout=60
 
-    
-    )
-
-    data = response.json()
-    return data["response"]
+def generate_diary(text):
+    result = generate_with_fallback(DIARY_PROMPT.format(text=text))
+    return result["text"]

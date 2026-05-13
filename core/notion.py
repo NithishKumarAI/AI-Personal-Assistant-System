@@ -1,22 +1,49 @@
 import os
-from dotenv import load_dotenv
+
 import requests
+from dotenv import load_dotenv
 
 load_dotenv()
+
 NOTION_API_KEY = os.getenv("NOTION_API_KEY")
-DATABASE_ID = os.getenv("DATABASE_ID")
+LOG_DATABASE_ID = os.getenv("DATABASE_ID")
+DAILY_DIARY_DATABASE_ID = os.getenv("DAILY_DIARY_DATABASE_ID")
+NOTION_VERSION = "2022-06-28"
+REQUEST_TIMEOUT_SECONDS = 20
 
-def  add_entry_to_notion(content,date,time):
-    url = "https://api.notion.com/v1/pages"
 
-    headers = {
-        "Authorization": f"Bearer {NOTION_API_KEY}",
+def _require_setting(name, value):
+    if not value:
+        raise RuntimeError(f"Missing {name}. Add it to your .env file.")
+
+    return value
+
+
+def _headers():
+    api_key = _require_setting("NOTION_API_KEY", NOTION_API_KEY)
+
+    return {
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
+        "Notion-Version": NOTION_VERSION,
     }
 
+
+def _send_to_notion(method, url, payload):
+    response = requests.request(
+        method,
+        url,
+        headers=_headers(),
+        json=payload,
+        timeout=REQUEST_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def add_entry_to_notion(content, date, time):
     data = {
-        "parent": {"database_id": DATABASE_ID},
+        "parent": {"database_id": _require_setting("DATABASE_ID", LOG_DATABASE_ID)},
         "properties": {
             "Content": {
                 "title": [
@@ -43,21 +70,17 @@ def  add_entry_to_notion(content,date,time):
             }
         }
     }
-    response = requests.post(url, headers=headers, json=data)
-    return response.json()
+
+    return _send_to_notion("POST", "https://api.notion.com/v1/pages", data)
+
 
 def add_daily_diary(content, date):
-    url = "https://api.notion.com/v1/pages"
-
-    headers = {
-        "Authorization": f"Bearer {NOTION_API_KEY}",
-        "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
-    }
-
     data = {
         "parent": {
-            "database_id": os.getenv("DAILY_DIARY_DATABASE_ID")
+            "database_id": _require_setting(
+                "DAILY_DIARY_DATABASE_ID",
+                DAILY_DIARY_DATABASE_ID,
+            )
         },
         "properties": {
             "Diary": {
@@ -77,18 +100,11 @@ def add_daily_diary(content, date):
         }
     }
 
-    response = requests.post(url, headers=headers, json=data)
-    return response.json()
+    return _send_to_notion("POST", "https://api.notion.com/v1/pages", data)
+
 
 def update_daily_diary(page_id, content):
-
     url = f"https://api.notion.com/v1/pages/{page_id}"
-
-    headers = {
-        "Authorization": f"Bearer {NOTION_API_KEY}",
-        "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
-    }
 
     data = {
         "properties": {
@@ -104,10 +120,4 @@ def update_daily_diary(page_id, content):
         }
     }
 
-    response = requests.patch(
-        url,
-        headers=headers,
-        json=data
-    )
-
-    return response.json()
+    return _send_to_notion("PATCH", url, data)

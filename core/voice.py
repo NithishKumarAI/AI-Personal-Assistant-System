@@ -1,18 +1,49 @@
-import whisper
-import sounddevice as sd
-from scipy.io.wavfile import write
 import os
+import logging
+from pathlib import Path
 
-os.environ["PATH"] += os.pathsep + r"C:\Users\nithi\Downloads\ffmpeg-8.1-essentials_build\ffmpeg-8.1-essentials_build\bin"
-model = whisper.load_model("base")
+from dotenv import load_dotenv
+from groq import Groq
+from scipy.io.wavfile import write
+import sounddevice as sd
 
-def record_audio(filename="temp_audio.wav", duration=30, fs=16000):
-    print("recording...")
-    audio = sd.rec(int(duration*fs), samplerate=fs, channels=1)
+load_dotenv()
+
+LOGGER = logging.getLogger(__name__)
+RECORDING_SECONDS = 10
+AUDIO_SAMPLE_RATE = 16000
+TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
+TRANSCRIPTION_TIMEOUT_SECONDS = 45
+TRANSCRIPTION_FAILED_MESSAGE = "Transcription failed."
+
+client = Groq(
+    api_key=os.getenv("GROQ_API_KEY"),
+)
+
+
+def record_audio(filename="temp_audio.wav", duration=RECORDING_SECONDS, fs=AUDIO_SAMPLE_RATE):
+    audio = sd.rec(
+        int(duration * fs),
+        samplerate=fs,
+        channels=1,
+    )
     sd.wait()
-    write(filename,fs,audio)
-    print("done")
+    write(filename, fs, audio)
+    return filename
+
 
 def transcribe_audio(filename="temp_audio.wav"):
-    result = model.transcribe(filename,fp16=False)
-    return result['text']
+    try:
+        with Path(filename).open("rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                file=audio_file,
+                model=TRANSCRIPTION_MODEL,
+                response_format="verbose_json",
+                timeout=TRANSCRIPTION_TIMEOUT_SECONDS,
+            )
+
+        return transcription.text.strip()
+
+    except Exception:
+        LOGGER.warning("Groq transcription failed", exc_info=True)
+        return TRANSCRIPTION_FAILED_MESSAGE

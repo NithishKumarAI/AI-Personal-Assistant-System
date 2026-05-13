@@ -1,246 +1,539 @@
+from datetime import datetime, timedelta
+from html import escape
+
 import streamlit as st
-from core.llm import process_input            # Cleans/formats raw user input using the LLM
-from core.notion import add_entry_to_notion  # Saves data to Notion database
-from datetime import datetime, timedelta      # For working with dates and time
-from core.voice import record_audio, transcribe_audio         # Records mic and converts speech to text via Whisper
-from rag.fetch_data import fetch_diary_by_date  # Pulls entries from Notion
+
+from core.diary_service import generate_or_update_diary
+from core.llm import process_input
+from core.notion import add_entry_to_notion
+from core.voice import (
+    RECORDING_SECONDS,
+    TRANSCRIPTION_FAILED_MESSAGE,
+    record_audio,
+    transcribe_audio,
+)
+from rag.fetch_data import fetch_diary_by_date
+
+
+APP_TITLE = "AI Diary Assistant"
+RECENT_DAYS = 5
+
 
 st.set_page_config(
-    page_title="AI Personal Journal",
-    page_icon="📔",
-    layout="centered",           # Keeps content in a readable centre column
+    page_title=APP_TITLE,
+    page_icon=":memo:",
+    layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-# ── Session state initialisation ──────────────────────────────────────────────
-# st.session_state persists values across reruns (Streamlit reruns the whole
-# script on every user interaction, so without this, values would reset each time).
-#
-# We initialise only if the key doesn't exist yet — this prevents resetting
-# values that the user has already set in the current session.
-for k, v in [
-    ("voice_text",    ""),    # Holds the Whisper transcription after recording
-    ("clean_content", ""),    # Holds the LLM-processed entry after Submit
-    ("entry_ts",      ""),    # Holds the timestamp string shown with the saved entry
-    ("model_used", ""),
-    ("selected_date", None),  # Holds the date selected in the Past Diaries tab
-]:
-    if k not in st.session_state:
-        st.session_state[k] = v
 
-# Grab the current date and time once — used throughout the file
-now = datetime.now()
+def inject_styles():
+    st.markdown(
+        """
+        <style>
+            :root {
+                --app-bg: #f6f7f9;
+                --surface: #ffffff;
+                --surface-soft: #f9fafb;
+                --text-main: #17202a;
+                --text-muted: #667085;
+                --border: #d9dee7;
+                --accent: #2f6f73;
+                --accent-soft: #e7f2f1;
+                --warm: #9a6b2f;
+            }
 
-# Default the selected date to yesterday if it hasn't been set yet
-if st.session_state.selected_date is None:
-    st.session_state.selected_date = now.date() - timedelta(days=1)
+            [data-testid="stAppViewContainer"] {
+                background: var(--app-bg);
+            }
 
+            .block-container {
+                max-width: 1080px;
+                padding-top: 3.25rem;
+                padding-bottom: 3rem;
+            }
 
-# ── Header ────────────────────────────────────────────────────────────────────
-# Two columns: title on the left, today's date on the right
-col_title, col_date = st.columns([3, 1])
-with col_title:
-    st.title("📔 AI Personal Journal")
-with col_date:
-    # st.caption renders small grey text — used here for the date
-    st.caption(now.strftime("%A, %B %d, %Y"))
+            h1, h2, h3, h4 {
+                color: var(--text-main);
+                letter-spacing: 0;
+            }
 
-st.divider()  # Horizontal rule between header and tabs
+            p, li, label, [data-testid="stMarkdownContainer"] {
+                color: var(--text-main);
+            }
 
+            div[data-testid="stCaptionContainer"] {
+                color: var(--text-muted);
+            }
 
-# ── Tabs ──────────────────────────────────────────────────────────────────────
-# Two tabs: one for writing today's entry, one for reading past diaries.
-# Streamlit returns a tab object for each — content goes inside a `with` block.
-tab_today, tab_past = st.tabs(["✍️ Today's Entry", "📖 Past Diaries"])
+            .app-header {
+                display: flex;
+                justify-content: space-between;
+                gap: 1.5rem;
+                align-items: flex-start;
+                margin-bottom: 1rem;
+            }
 
+            .app-header h1 {
+                margin: 0;
+                font-size: 2.55rem;
+                line-height: 1.05;
+                font-weight: 760;
+            }
 
-# ═════════════════════════════════════════════════════════════════════════════
-# TAB 1 — TODAY'S ENTRY
-# Lets the user record audio OR type text, then save it to Notion.
-# Also has a "Generate Diary" button that compiles all of today's logs
-# into a single diary entry using the LLM.
-# ═════════════════════════════════════════════════════════════════════════════
-with tab_today:
+            .subtitle {
+                max-width: 720px;
+                margin: .75rem 0 0 0;
+                color: var(--text-muted);
+                font-size: 1.05rem;
+                line-height: 1.55;
+            }
 
-    # ── Section: Voice recording ──────────────────────────────────────────────
-    st.subheader("🎙️ Voice Input")
+            .date-pill,
+            .model-badge {
+                border: 1px solid var(--border);
+                background: var(--surface);
+                border-radius: 999px;
+                color: var(--text-muted);
+                display: inline-flex;
+                font-size: .84rem;
+                font-weight: 650;
+                padding: .45rem .75rem;
+                white-space: nowrap;
+            }
 
-    # Info box explains to the user what the record button does
-    st.info("**Record a voice note** — 30 seconds · transcribed by Whisper AI")
+            .model-badge {
+                background: var(--accent-soft);
+                border-color: #c8e1df;
+                color: #24585b;
+            }
 
-    # Record button — triggers audio capture then Whisper transcription.
-    # The result is stored in session_state so it survives the next rerun.
-    if st.button("🎙️ Start Recording", key="record"):
-        with st.spinner("Recording… speak now"):
-            record_audio(duration=30)          # Captures 30 seconds of mic audio
-        with st.spinner("Transcribing…"):
-            st.session_state.voice_text = transcribe_audio()  # Whisper converts audio → text
-        st.success("Voice captured ✓")
+            .system-summary {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: .75rem;
+                margin: 1rem 0 1.15rem 0;
+            }
 
-    # If there is a transcription, show it so the user can review before submitting
-    if st.session_state.voice_text:
-        st.caption("You said:")
-        st.write(f"*{st.session_state.voice_text}*")  # Italic via markdown asterisks
+            .system-summary div {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: .85rem .9rem;
+            }
 
-    st.divider()
+            .system-summary strong {
+                color: var(--text-main);
+                display: block;
+                font-size: .88rem;
+                margin-bottom: .2rem;
+            }
 
-    # ── Section: Text entry ───────────────────────────────────────────────────
-    st.subheader("📝 What did you do today?")
-    # Text area pre-filled with the voice transcription (if any).
-    # The user can edit it before saving.
-    user_input = st.text_area(
-        label="Entry",
-        value=st.session_state.voice_text,
-        height=160,
-        placeholder="Write freely or speak — this is your space…",
-        label_visibility="collapsed",
+            .system-summary span {
+                color: var(--text-muted);
+                display: block;
+                font-size: .82rem;
+                line-height: 1.35;
+            }
+
+            .tab-intro {
+                color: var(--text-muted);
+                font-size: .95rem;
+                margin: .25rem 0 1rem 0;
+            }
+
+            .transcription-box,
+            .entry-preview,
+            .diary-reader {
+                background: var(--surface-soft);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                line-height: 1.72;
+            }
+
+            .transcription-box {
+                margin-top: .9rem;
+                padding: .85rem 1rem;
+            }
+
+            .entry-preview {
+                margin-top: 1rem;
+                padding: 1rem 1.1rem;
+            }
+
+            .entry-meta {
+                align-items: center;
+                display: flex;
+                flex-wrap: wrap;
+                gap: .55rem;
+                justify-content: space-between;
+                margin-bottom: .75rem;
+            }
+
+            .entry-meta span:first-child {
+                color: var(--text-muted);
+                font-size: .86rem;
+            }
+
+            .diary-reader {
+                font-size: 1rem;
+                padding: 1.1rem 1.2rem;
+            }
+
+            div[data-testid="stTabs"] [role="tablist"] {
+                border-bottom: 1px solid var(--border);
+                gap: .35rem;
+            }
+
+            div[data-testid="stTabs"] [role="tab"] {
+                color: var(--text-muted);
+                font-weight: 650;
+                padding: .75rem 1rem;
+            }
+
+            div[data-testid="stTabs"] [aria-selected="true"] {
+                color: var(--accent);
+            }
+
+            .stTextArea textarea {
+                border-radius: 8px;
+                min-height: 170px;
+            }
+
+            .stButton button,
+            .stFormSubmitButton button {
+                border-radius: 8px;
+                font-weight: 650;
+            }
+
+            @media (max-width: 760px) {
+                .block-container {
+                    padding-top: 1.25rem;
+                }
+
+                .app-header {
+                    display: block;
+                }
+
+                .app-header h1 {
+                    font-size: 2rem;
+                }
+
+                .date-pill {
+                    margin-top: .9rem;
+                }
+
+                .system-summary {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
     )
-    # ── Action buttons ────────────────────────────────────────────────────────
-    # Two buttons side by side using columns.
-    # col3 is an empty spacer column so buttons don't stretch full width.
-    with st.form("entry_form"):
 
-        col1, col2, col3 = st.columns([1, 1.4, 3])
 
-        with col1:
-            submit_clicked = st.form_submit_button(
-                "💾 Save Entry",
-                type="primary"
+def initialise_session_state(now):
+    defaults = {
+        "voice_text": "",
+        "clean_content": "",
+        "entry_ts": "",
+        "model_used": "",
+        "selected_date": now.date() - timedelta(days=1),
+    }
+
+    for key, value in defaults.items():
+        st.session_state.setdefault(key, value)
+
+
+def html_text(text):
+    return "<br>".join(escape(str(text)).splitlines())
+
+
+def render_header(now):
+    st.markdown(
+        f"""
+        <div class="app-header">
+            <div>
+                <h1>{APP_TITLE}</h1>
+                <p class="subtitle">
+                    A voice-to-diary workflow that records daily notes, cleans them with
+                    Gemini fallback routing, stores them in Notion, and generates readable
+                    daily summaries.
+                </p>
+            </div>
+            <div class="date-pill">{now.strftime("%A, %B %d, %Y")}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+        <div class="system-summary">
+            <div><strong>Voice input</strong><span>Groq Whisper speech-to-text</span></div>
+            <div><strong>AI router</strong><span>Gemini multi-model fallback</span></div>
+            <div><strong>Memory layer</strong><span>Notion log and diary databases</span></div>
+            <div><strong>Workflow</strong><span>Capture, clean, save, generate</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.warning(
+        "Demo environment: API keys, Notion database IDs, network access, and local "
+        "microphone permissions must be configured for the full workflow."
+    )
+
+
+def render_voice_input():
+    st.markdown("#### Voice note")
+    st.caption(
+        f"Record a {RECORDING_SECONDS}-second local audio note and transcribe it with Groq Whisper."
+    )
+
+    if st.button(
+        f"Start {RECORDING_SECONDS}-second recording",
+        key="record",
+        use_container_width=True,
+    ):
+        try:
+            with st.spinner(f"Recording for {RECORDING_SECONDS} seconds. Speak naturally."):
+                record_audio(duration=RECORDING_SECONDS)
+
+            with st.spinner("Transcribing audio with Groq Whisper..."):
+                transcription = transcribe_audio()
+
+        except Exception as exc:
+            st.error(f"Recording is unavailable in this environment: {exc}")
+            return
+
+        if not transcription or transcription == TRANSCRIPTION_FAILED_MESSAGE:
+            st.error(
+                "Transcription failed. Check the Groq key, audio device, and network connection."
             )
+            return
 
-        with col2:
-            generate_clicked = st.form_submit_button(
-                "✦ Generate Diary"
-            )
+        st.session_state.voice_text = transcription.strip()
+        st.success("Transcription ready. Review or edit it before saving.")
 
-    # ── Save Entry logic ──────────────────────────────────────────────────────
-    if submit_clicked:
-        if not user_input.strip():
-            # .strip() removes whitespace — warns if the text box is empty
-            st.warning("Write or record something first.")
-        else:
-            with st.spinner("Processing…"):
+    if st.session_state.voice_text:
+        st.markdown(
+            f"""
+            <div class="transcription-box">
+                <strong>Transcription</strong><br>
+                {html_text(st.session_state.voice_text)}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-                result = process_input(user_input)
 
-                clean_content = result["text"]
+def save_entry(user_input, now):
+    if not user_input.strip():
+        st.warning("Write or record something first.")
+        return
 
-                model_used = result["model_used"]
+    try:
+        with st.spinner("Cleaning your journal entry with Gemini..."):
+            result = process_input(user_input)
 
-            # Format date and time strings for Notion and the display timestamp
-            today_str = now.strftime("%Y-%m-%d")       # e.g. "2026-05-10"
-            time_now  = now.strftime("%H:%M:%S")       # e.g. "14:32:01"
-            disp_ts   = now.strftime("%B %d, %Y — %H:%M")  # e.g. "May 10, 2026 — 14:32"
+        clean_content = result["text"]
+        model_used = result.get("model_used", "Unknown model")
+        today_str = now.strftime("%Y-%m-%d")
+        time_now = now.strftime("%H:%M:%S")
+        display_ts = now.strftime("%B %d, %Y at %H:%M")
 
-            # Store the processed content and timestamp in session state
-            # so they persist after Streamlit reruns on the next interaction
-            st.session_state.clean_content = clean_content
-            st.session_state.entry_ts      = disp_ts
-            st.session_state.model_used = model_used
-            # Save the entry to Notion — this calls the Notion API
+        with st.spinner("Saving the cleaned entry to Notion..."):
             add_entry_to_notion(clean_content, today_str, time_now)
 
-            # Clear voice text so the textarea doesn't re-populate on next rerun
-            st.session_state.voice_text = ""
-            st.success("Entry saved to Notion ✓")
+    except Exception as exc:
+        st.error(f"Could not save the entry: {exc}")
+        return
 
-    # Show the saved entry below the buttons if one exists in session state
-    if st.session_state.clean_content:
-        st.divider()
-        st.caption(f"✦ {st.session_state.entry_ts}")   # Small timestamp above the entry
-        st.caption(f"⚡ Model Used: {st.session_state.model_used}")
-        st.write(st.session_state.clean_content)        # The LLM-processed entry text
+    st.session_state.clean_content = clean_content
+    st.session_state.entry_ts = display_ts
+    st.session_state.model_used = model_used
+    st.session_state.voice_text = ""
+    st.success("Entry saved to Notion.")
 
-    # ── Generate Diary logic ──────────────────────────────────────────────────
-    # Fetches ALL of today's saved log entries from Notion,
-    # combines them into one block, then asks the LLM to write a diary from them.
-    from core.diary_service import generate_or_update_diary
 
-    if generate_clicked:
-
-        with st.spinner("Generating diary..."):
-
+def generate_diary():
+    try:
+        with st.spinner("Collecting today's logs and drafting the diary..."):
             message = generate_or_update_diary()
+    except Exception as exc:
+        st.error(f"Could not generate the diary: {exc}")
+        return
 
+    if message.lower().startswith("no logs"):
+        st.info(message)
+    else:
         st.success(message)
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# TAB 2 — PAST DIARIES
-# Lets the user pick a date and read the diary saved for that day.
-# Two columns: left = date selector, right = diary reader.
-# ═════════════════════════════════════════════════════════════════════════════
-with tab_past:
+def render_entry_form(now):
+    st.markdown("#### Journal entry")
+    st.caption("Write directly, or start from the voice transcription above.")
 
-    col_left, col_right = st.columns([1, 2.5])
-
-    # ── Left column: Date selection ───────────────────────────────────────────
-    with col_left:
-        st.subheader("📅 Pick a date")
-
-        # Calendar date picker — user can pick any date
-        manual_date = st.date_input(
-            "Date",
-            value=st.session_state.selected_date,
+    with st.form("entry_form", clear_on_submit=False):
+        user_input = st.text_area(
+            label="Entry",
+            value=st.session_state.voice_text,
+            height=170,
+            placeholder="Capture what happened today in plain language...",
             label_visibility="collapsed",
-            key="date_picker",
         )
 
-        # If the user changed the calendar date, update session state and rerun
-        # so the right column immediately shows the new date's diary
-        if manual_date != st.session_state.selected_date:
-            st.session_state.selected_date = manual_date
-            st.rerun()
+        col_save, col_generate, col_space = st.columns([1, 1.15, 2.4])
+        with col_save:
+            submit_clicked = st.form_submit_button(
+                "Save Entry",
+                type="primary",
+                use_container_width=True,
+            )
+        with col_generate:
+            generate_clicked = st.form_submit_button(
+                "Generate Diary",
+                use_container_width=True,
+            )
+        with col_space:
+            st.caption("Saved entries feed the daily diary generator.")
 
-        st.caption("Recent entries")
+    if submit_clicked:
+        save_entry(user_input, now)
 
-        # Build a list of the last 5 days for the quick-select radio buttons
-        recent_dates  = [now.date() - timedelta(days=i) for i in range(1, 6)]
-        recent_labels = [d.strftime("%b %d, %Y") for d in recent_dates]
+    if generate_clicked:
+        generate_diary()
 
-        # Find which recent date is currently selected so the radio
-        # starts on the right option. If the selected date is older than
-        # 5 days (i.e. not in recent_dates), default to the first option.
-        try:
-            default_idx = recent_dates.index(st.session_state.selected_date)
-        except ValueError:
-            default_idx = 0
 
-        # Radio widget styled as a compact list of recent dates.
-        # No custom CSS needed — Streamlit's native radio is clean enough.
-        chosen_label = st.radio(
-            "recent",
-            options=recent_labels,
-            index=default_idx,
-            label_visibility="collapsed",  # Label hidden; st.caption above explains it
-            key="recent_radio",
-        )
+def render_saved_entry():
+    if not st.session_state.clean_content:
+        return
 
-        # Convert the chosen label back to a date object and sync to session state
-        chosen_date = recent_dates[recent_labels.index(chosen_label)]
-        if chosen_date != st.session_state.selected_date:
-            st.session_state.selected_date = chosen_date
-            st.rerun()  # Force a rerun so the right column updates immediately
+    model_name = escape(st.session_state.model_used or "Unknown model")
+    st.markdown(
+        f"""
+        <div class="entry-preview">
+            <div class="entry-meta">
+                <span>{escape(st.session_state.entry_ts)}</span>
+                <span class="model-badge">Model used: {model_name}</span>
+            </div>
+            <div>{html_text(st.session_state.clean_content)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # ── Right column: Diary reader ────────────────────────────────────────────
+
+def render_today_tab(now):
+    st.markdown(
+        '<p class="tab-intro">Capture a note, let Gemini clean it, and save the result to Notion.</p>',
+        unsafe_allow_html=True,
+    )
+
+    with st.container(border=True):
+        render_voice_input()
+
+    with st.container(border=True):
+        render_entry_form(now)
+
+    render_saved_entry()
+
+
+def recent_dates(now):
+    dates = [now.date() - timedelta(days=days_ago) for days_ago in range(1, RECENT_DAYS + 1)]
+    selected = st.session_state.selected_date
+
+    if selected not in dates:
+        return [selected, *dates]
+
+    return dates
+
+
+def render_date_picker(now):
+    st.markdown("#### Browse diaries")
+    st.caption("Pick any date or jump through recent diary shortcuts.")
+
+    manual_date = st.date_input(
+        "Select diary date",
+        value=st.session_state.selected_date,
+    )
+
+    if manual_date != st.session_state.selected_date:
+        st.session_state.selected_date = manual_date
+        st.rerun()
+
+    dates = recent_dates(now)
+    labels = [date.strftime("%b %d, %Y") for date in dates]
+    default_idx = dates.index(st.session_state.selected_date)
+
+    chosen_label = st.radio(
+        "Recent entries",
+        options=labels,
+        index=default_idx,
+    )
+
+    chosen_date = dates[labels.index(chosen_label)]
+    if chosen_date != st.session_state.selected_date:
+        st.session_state.selected_date = chosen_date
+        st.rerun()
+
+
+def render_diary_reader(selected_date):
+    display_date = selected_date.strftime("%A, %B %d, %Y")
+
+    st.markdown(f"### {display_date}")
+
+    try:
+        diary_content = fetch_diary_by_date(selected_date)
+    except Exception as exc:
+        st.error(f"Could not load this diary from Notion: {exc}")
+        return
+
+    if not diary_content:
+        st.info("No diary entry found for this date. Generate a diary first or choose another day.")
+        return
+
+    word_count = len(str(diary_content).split())
+    st.caption(f"{word_count} words")
+    st.markdown(
+        f'<div class="diary-reader">{html_text(diary_content)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_past_tab(now):
+    st.markdown(
+        '<p class="tab-intro">Review generated diary entries stored in the Notion diary database.</p>',
+        unsafe_allow_html=True,
+    )
+
+    col_left, col_right = st.columns([1, 2.2], gap="large")
+
+    with col_left:
+        with st.container(border=True):
+            render_date_picker(now)
+
     with col_right:
-        selected = st.session_state.selected_date
+        with st.container(border=True):
+            render_diary_reader(st.session_state.selected_date)
 
-        # Fetch the diary for the selected date from Notion
-        diary_content = fetch_diary_by_date(selected)
 
-        # Display the date as the section header
-        disp_date = selected.strftime("%A, %B %d, %Y")
-        st.subheader(f"📖 {disp_date}")
-        st.divider()
+def main():
+    inject_styles()
+    now = datetime.now()
+    initialise_session_state(now)
+    render_header(now)
 
-        if diary_content:
-            # Show word count as a small caption above the diary text
-            wc = len(str(diary_content).split())
-            st.caption(f"{wc} words")
+    tab_today, tab_past = st.tabs(["Today's Entry", "Past Diaries"])
 
-            # Render the diary — st.write handles plain text and markdown
-            st.write(diary_content)
-        else:
-            # Friendly message if no diary was saved for this date
-            st.info("No diary entry found for this date. Try a different day or generate today's diary first.")
+    with tab_today:
+        render_today_tab(now)
+
+    with tab_past:
+        render_past_tab(now)
+
+
+if __name__ == "__main__":
+    main()

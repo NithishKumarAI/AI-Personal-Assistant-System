@@ -1,15 +1,7 @@
 from core.model_router import generate_with_fallback
 
 
-def process_input(text):
-
-    if not text or not text.strip():
-        return {
-            "text": "No input provided.",
-            "model_used": "none"
-        }
-
-    prompt = f"""
+CLEAN_ENTRY_PROMPT = """
 You are NOT a chatbot.
 
 You ONLY return cleaned text.
@@ -36,6 +28,14 @@ Input:
 Cleaned text (only output this):
 """
 
-    result = generate_with_fallback(prompt)
 
-    return result
+def process_input(text):
+    cleaned_text = text.strip() if text else ""
+
+    if not cleaned_text:
+        return {
+            "text": "No input provided.",
+            "model_used": "none",
+        }
+
+    return generate_with_fallback(CLEAN_ENTRY_PROMPT.format(text=cleaned_text))
