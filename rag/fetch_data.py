@@ -2,14 +2,11 @@ import os
 from datetime import datetime
 
 import requests
-from dotenv import load_dotenv
+from core.config import get_secret
 
-load_dotenv()
-
-
-NOTION_API_KEY = os.getenv("NOTION_API_KEY")
-LOG_DATABASE_ID = os.getenv("DATABASE_ID")
-DAILY_DIARY_DATABASE_ID = os.getenv("DAILY_DIARY_DATABASE_ID")
+NOTION_API_KEY = get_secret("NOTION_API_KEY")
+LOG_DATABASE_ID = get_secret("DATABASE_ID")
+DAILY_DIARY_DATABASE_ID = get_secret("DAILY_DIARY_DATABASE_ID")
 NOTION_VERSION = "2022-06-28"
 REQUEST_TIMEOUT_SECONDS = 20
 

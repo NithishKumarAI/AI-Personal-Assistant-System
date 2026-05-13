@@ -1,23 +1,20 @@
 import os
 import logging
 from pathlib import Path
-
-from dotenv import load_dotenv
 from groq import Groq
 from scipy.io.wavfile import write
 import sounddevice as sd
-
-load_dotenv()
+from core.config import get_secret
 
 LOGGER = logging.getLogger(__name__)
-RECORDING_SECONDS = 10
+RECORDING_SECONDS = 15
 AUDIO_SAMPLE_RATE = 16000
 TRANSCRIPTION_MODEL = "whisper-large-v3-turbo"
 TRANSCRIPTION_TIMEOUT_SECONDS = 45
 TRANSCRIPTION_FAILED_MESSAGE = "Transcription failed."
 
 client = Groq(
-    api_key=os.getenv("GROQ_API_KEY"),
+    api_key=get_secret("GROQ_API_KEY")
 )
 
 

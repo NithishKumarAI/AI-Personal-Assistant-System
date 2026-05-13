@@ -2,19 +2,19 @@ import os
 import logging
 
 import google.generativeai as genai
-from dotenv import load_dotenv
-
-load_dotenv()
+from core.config import get_secret
 
 LOGGER = logging.getLogger(__name__)
 GEMINI_TIMEOUT_SECONDS = 60
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+genai.configure(
+    api_key=get_secret("GEMINI_API_KEY")
+)
 
 MODELS = [
-    os.getenv("PRIMARY_MODEL"),
-    os.getenv("SECONDARY_MODEL"),
-    os.getenv("TERTIARY_MODEL"),
+    get_secret("PRIMARY_MODEL"),
+    get_secret("SECONDARY_MODEL"),
+    get_secret("TERTIARY_MODEL"),
 ]
 MODELS = [model for model in MODELS if model]
 
