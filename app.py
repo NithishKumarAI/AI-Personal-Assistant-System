@@ -7,9 +7,7 @@ from core.diary_service import generate_or_update_diary
 from core.llm import process_input
 from core.notion import add_entry_to_notion
 from core.voice import (
-    RECORDING_SECONDS,
     TRANSCRIPTION_FAILED_MESSAGE,
-    record_audio,
     transcribe_audio,
 )
 from rag.fetch_data import fetch_diary_by_date
@@ -287,37 +285,40 @@ def render_header(now):
 
 
 def render_voice_input():
+
     st.markdown("#### Voice note")
+
     st.caption(
-        f"Record a {RECORDING_SECONDS}-second local audio note and transcribe it with Groq Whisper."
+        "Record a voice note directly from your browser and transcribe it with Groq Whisper."
     )
 
-    if st.button(
-        f"Start {RECORDING_SECONDS}-second recording",
-        key="record",
-        use_container_width=True,
-    ):
-        try:
-            with st.spinner(f"Recording for {RECORDING_SECONDS} seconds. Speak naturally."):
-                record_audio(duration=RECORDING_SECONDS)
+    audio_value = st.audio_input(
+        "🎙️ Record your journal entry"
+    )
 
-            with st.spinner("Transcribing audio with Groq Whisper..."):
-                transcription = transcribe_audio()
+    if audio_value:
 
-        except Exception as exc:
-            st.error(f"Recording is unavailable in this environment: {exc}")
-            return
+        with open("temp_audio.wav", "wb") as f:
+            f.write(audio_value.read())
+
+        with st.spinner("Transcribing audio with Groq Whisper..."):
+
+            transcription = transcribe_audio("temp_audio.wav")
 
         if not transcription or transcription == TRANSCRIPTION_FAILED_MESSAGE:
+
             st.error(
-                "Transcription failed. Check the Groq key, audio device, and network connection."
+                "Transcription failed. Check the Groq key and network connection."
             )
+
             return
 
         st.session_state.voice_text = transcription.strip()
+
         st.success("Transcription ready. Review or edit it before saving.")
 
     if st.session_state.voice_text:
+
         st.markdown(
             f"""
             <div class="transcription-box">
@@ -327,7 +328,6 @@ def render_voice_input():
             """,
             unsafe_allow_html=True,
         )
-
 
 def save_entry(user_input, now):
     if not user_input.strip():
