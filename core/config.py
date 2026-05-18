@@ -1,27 +1,27 @@
-"""Configuration for local Gemini execution (.env only)."""
+"""Configuration for the deployment showcase (Streamlit secrets only)."""
 
 from __future__ import annotations
 
-import os
+import streamlit as st
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-CONFIG_SOURCE = "dotenv"
+CONFIG_SOURCE = "streamlit_secrets"
 
 
 def get_secret(key: str, default: str | None = None) -> str | None:
-    value = os.getenv(key, default)
-    if value is None or value == "":
+    try:
+        value = st.secrets[key]
+        if value is None or value == "":
+            return default
+        return str(value).strip()
+    except (KeyError, FileNotFoundError, AttributeError, TypeError):
         return default
-    return str(value).strip()
 
 
 def get_required_secret(key: str) -> str:
     value = get_secret(key)
     if not value:
         raise RuntimeError(
-            f"Missing required setting '{key}'. Add it to your .env file and restart."
+            f"Missing required setting '{key}'. Add it in Streamlit Cloud "
+            "Secrets or .streamlit/secrets.toml for local demos."
         )
     return value

@@ -1,6 +1,5 @@
-# Local Gemini execution (gemini-local) — cloud APIs via .env
+# Deployment showcase (main) — cloud APIs only
 streamlit>=1.32,<2
-python-dotenv>=1.0,<2
 requests>=2.31,<3
 google-generativeai>=0.8,<1
 groq>=0.9,<1

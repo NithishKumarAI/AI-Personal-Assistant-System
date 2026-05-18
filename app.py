@@ -1,4 +1,4 @@
-"""Streamlit UI — local Gemini execution (gemini-local branch)."""
+"""Streamlit UI — deployment showcase (main branch)."""
 
 from __future__ import annotations
 
@@ -212,13 +212,14 @@ def render_config_gate() -> None:
     if issues:
         st.error(format_config_issues(issues))
         st.info(
-            "Copy `.env.example` to `.env`, fill in your API keys and Notion database IDs, "
-            "then restart: `streamlit run app.py`"
+            "This deployment uses **Streamlit Secrets** (not a `.env` file). "
+            "Add keys in Streamlit Cloud → Secrets, or copy "
+            "`.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` locally."
         )
         st.stop()
 
     st.markdown(
-        '<span class="status-pill ok">`.env` configuration loaded</span>',
+        '<span class="status-pill ok">Configuration loaded</span>',
         unsafe_allow_html=True,
     )
 
@@ -230,8 +231,8 @@ def render_header(now: datetime) -> None:
             <div>
                 <h1>{APP_TITLE}</h1>
                 <p class="subtitle">
-                    Local development build: voice or text capture, Gemini cleanup with
-                    multi-model fallback, and Notion-backed daily diary generation.
+                    Portfolio demo: voice or text capture, Gemini cleanup with model
+                    fallback, and Notion-backed daily diary generation.
                 </p>
             </div>
             <div class="date-pill">{now.strftime("%A, %B %d, %Y")}</div>
@@ -245,7 +246,7 @@ def render_header(now: datetime) -> None:
         <div class="system-summary">
             <div><strong>Voice</strong><span>Groq Whisper (browser mic)</span></div>
             <div><strong>LLM</strong><span>Gemini fallback router</span></div>
-            <div><strong>Storage</strong><span>Notion log and diary databases</span></div>
+            <div><strong>Storage</strong><span>Demo Notion databases</span></div>
             <div><strong>Flow</strong><span>Capture → clean → save → summarize</span></div>
         </div>
         """,
@@ -253,7 +254,8 @@ def render_header(now: datetime) -> None:
     )
 
     st.caption(
-        "Runs locally with `.env` — use your own Notion integration and API keys."
+        "Live demo — uses recruiter-facing demo Notion workspaces. "
+        "Do not store personal or sensitive information."
     )
 
 
@@ -271,7 +273,7 @@ def render_voice_input() -> None:
             transcription = transcribe_audio("temp_audio.wav")
 
         if not transcription or transcription == TRANSCRIPTION_FAILED_MESSAGE:
-            st.error("Transcription failed. Check GROQ_API_KEY in your .env file.")
+            st.error("Transcription failed. Check GROQ_API_KEY in Streamlit Secrets.")
             return
 
         st.session_state.voice_text = transcription.strip()
@@ -385,7 +387,7 @@ def render_saved_entry() -> None:
 
 def render_today_tab(now: datetime) -> None:
     st.markdown(
-        '<p class="tab-intro">Capture a note, clean it with Gemini, and save it to your Daily Logs database.</p>',
+        '<p class="tab-intro">Capture a note, clean it with Gemini, and persist it to the demo log database.</p>',
         unsafe_allow_html=True,
     )
 
@@ -449,7 +451,7 @@ def render_diary_reader(selected_date) -> None:
 
 def render_past_tab(now: datetime) -> None:
     st.markdown(
-        '<p class="tab-intro">Read generated diaries from your Daily Diary database.</p>',
+        '<p class="tab-intro">Read generated diaries from the demo diary database.</p>',
         unsafe_allow_html=True,
     )
 
