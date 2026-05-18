@@ -1,3 +1,7 @@
+"""Streamlit UI — local Gemini execution (gemini-local branch)."""
+
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 from html import escape
 
@@ -6,12 +10,9 @@ import streamlit as st
 from core.diary_service import generate_or_update_diary
 from core.llm import process_input
 from core.notion import add_entry_to_notion
-from core.voice import (
-    TRANSCRIPTION_FAILED_MESSAGE,
-    transcribe_audio,
-)
+from core.validation import format_config_issues, validate_config
+from core.voice import TRANSCRIPTION_FAILED_MESSAGE, transcribe_audio
 from rag.fetch_data import fetch_diary_by_date
-
 
 APP_TITLE = "AI Diary Assistant"
 RECENT_DAYS = 5
@@ -25,12 +26,12 @@ st.set_page_config(
 )
 
 
-def inject_styles():
+def inject_styles() -> None:
     st.markdown(
         """
         <style>
             :root {
-                --app-bg: #f6f7f9;
+                --app-bg: #f4f6f8;
                 --surface: #ffffff;
                 --surface-soft: #f9fafb;
                 --text-main: #17202a;
@@ -38,7 +39,8 @@ def inject_styles():
                 --border: #d9dee7;
                 --accent: #2f6f73;
                 --accent-soft: #e7f2f1;
-                --warm: #9a6b2f;
+                --success: #1f7a4d;
+                --warning: #9a6b2f;
             }
 
             [data-testid="stAppViewContainer"] {
@@ -47,21 +49,8 @@ def inject_styles():
 
             .block-container {
                 max-width: 1080px;
-                padding-top: 3.25rem;
+                padding-top: 2.5rem;
                 padding-bottom: 3rem;
-            }
-
-            h1, h2, h3, h4 {
-                color: var(--text-main);
-                letter-spacing: 0;
-            }
-
-            p, li, label, [data-testid="stMarkdownContainer"] {
-                color: var(--text-main);
-            }
-
-            div[data-testid="stCaptionContainer"] {
-                color: var(--text-muted);
             }
 
             .app-header {
@@ -74,29 +63,31 @@ def inject_styles():
 
             .app-header h1 {
                 margin: 0;
-                font-size: 2.55rem;
-                line-height: 1.05;
+                font-size: 2.45rem;
+                line-height: 1.08;
                 font-weight: 760;
+                color: var(--text-main);
             }
 
             .subtitle {
                 max-width: 720px;
-                margin: .75rem 0 0 0;
+                margin: .7rem 0 0 0;
                 color: var(--text-muted);
-                font-size: 1.05rem;
+                font-size: 1.02rem;
                 line-height: 1.55;
             }
 
             .date-pill,
-            .model-badge {
+            .model-badge,
+            .status-pill {
                 border: 1px solid var(--border);
                 background: var(--surface);
                 border-radius: 999px;
                 color: var(--text-muted);
                 display: inline-flex;
-                font-size: .84rem;
+                font-size: .82rem;
                 font-weight: 650;
-                padding: .45rem .75rem;
+                padding: .4rem .72rem;
                 white-space: nowrap;
             }
 
@@ -104,6 +95,12 @@ def inject_styles():
                 background: var(--accent-soft);
                 border-color: #c8e1df;
                 color: #24585b;
+            }
+
+            .status-pill.ok {
+                border-color: #b7e2cb;
+                background: #edf9f1;
+                color: var(--success);
             }
 
             .system-summary {
@@ -116,7 +113,7 @@ def inject_styles():
             .system-summary div {
                 background: var(--surface);
                 border: 1px solid var(--border);
-                border-radius: 8px;
+                border-radius: 10px;
                 padding: .85rem .9rem;
             }
 
@@ -145,19 +142,13 @@ def inject_styles():
             .diary-reader {
                 background: var(--surface-soft);
                 border: 1px solid var(--border);
-                border-radius: 8px;
+                border-radius: 10px;
                 line-height: 1.72;
             }
 
-            .transcription-box {
-                margin-top: .9rem;
-                padding: .85rem 1rem;
-            }
-
-            .entry-preview {
-                margin-top: 1rem;
-                padding: 1rem 1.1rem;
-            }
+            .transcription-box { margin-top: .9rem; padding: .85rem 1rem; }
+            .entry-preview { margin-top: 1rem; padding: 1rem 1.1rem; }
+            .diary-reader { font-size: 1rem; padding: 1.1rem 1.2rem; }
 
             .entry-meta {
                 align-items: center;
@@ -173,57 +164,26 @@ def inject_styles():
                 font-size: .86rem;
             }
 
-            .diary-reader {
-                font-size: 1rem;
-                padding: 1.1rem 1.2rem;
-            }
-
             div[data-testid="stTabs"] [role="tablist"] {
                 border-bottom: 1px solid var(--border);
                 gap: .35rem;
-            }
-
-            div[data-testid="stTabs"] [role="tab"] {
-                color: var(--text-muted);
-                font-weight: 650;
-                padding: .75rem 1rem;
             }
 
             div[data-testid="stTabs"] [aria-selected="true"] {
                 color: var(--accent);
             }
 
-            .stTextArea textarea {
-                border-radius: 8px;
-                min-height: 170px;
-            }
-
-            .stButton button,
-            .stFormSubmitButton button {
-                border-radius: 8px;
+            .stTextArea textarea { border-radius: 10px; min-height: 170px; }
+            .stButton button, .stFormSubmitButton button {
+                border-radius: 10px;
                 font-weight: 650;
             }
 
             @media (max-width: 760px) {
-                .block-container {
-                    padding-top: 1.25rem;
-                }
-
-                .app-header {
-                    display: block;
-                }
-
-                .app-header h1 {
-                    font-size: 2rem;
-                }
-
-                .date-pill {
-                    margin-top: .9rem;
-                }
-
-                .system-summary {
-                    grid-template-columns: 1fr;
-                }
+                .block-container { padding-top: 1.25rem; }
+                .app-header { display: block; }
+                .app-header h1 { font-size: 2rem; }
+                .system-summary { grid-template-columns: 1fr; }
             }
         </style>
         """,
@@ -231,7 +191,7 @@ def inject_styles():
     )
 
 
-def initialise_session_state(now):
+def initialise_session_state(now: datetime) -> None:
     defaults = {
         "voice_text": "",
         "clean_content": "",
@@ -239,25 +199,39 @@ def initialise_session_state(now):
         "model_used": "",
         "selected_date": now.date() - timedelta(days=1),
     }
-
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
 
 
-def html_text(text):
+def html_text(text: str) -> str:
     return "<br>".join(escape(str(text)).splitlines())
 
 
-def render_header(now):
+def render_config_gate() -> None:
+    issues = validate_config()
+    if issues:
+        st.error(format_config_issues(issues))
+        st.info(
+            "Copy `.env.example` to `.env`, fill in your API keys and Notion database IDs, "
+            "then restart: `streamlit run app.py`"
+        )
+        st.stop()
+
+    st.markdown(
+        '<span class="status-pill ok">`.env` configuration loaded</span>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_header(now: datetime) -> None:
     st.markdown(
         f"""
         <div class="app-header">
             <div>
                 <h1>{APP_TITLE}</h1>
                 <p class="subtitle">
-                    A voice-to-diary workflow that records daily notes, cleans them with
-                    Gemini fallback routing, stores them in Notion, and generates readable
-                    daily summaries.
+                    Local development build: voice or text capture, Gemini cleanup with
+                    multi-model fallback, and Notion-backed daily diary generation.
                 </p>
             </div>
             <div class="date-pill">{now.strftime("%A, %B %d, %Y")}</div>
@@ -269,56 +243,41 @@ def render_header(now):
     st.markdown(
         """
         <div class="system-summary">
-            <div><strong>Voice input</strong><span>Groq Whisper speech-to-text</span></div>
-            <div><strong>AI router</strong><span>Gemini multi-model fallback</span></div>
-            <div><strong>Memory layer</strong><span>Notion log and diary databases</span></div>
-            <div><strong>Workflow</strong><span>Capture, clean, save, generate</span></div>
+            <div><strong>Voice</strong><span>Groq Whisper (browser mic)</span></div>
+            <div><strong>LLM</strong><span>Gemini fallback router</span></div>
+            <div><strong>Storage</strong><span>Notion log and diary databases</span></div>
+            <div><strong>Flow</strong><span>Capture → clean → save → summarize</span></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.warning(
-        "Demo environment: API keys, Notion database IDs, network access, and local "
-        "microphone permissions must be configured for the full workflow."
-    )
-
-
-def render_voice_input():
-
-    st.markdown("#### Voice note")
-
     st.caption(
-        "Record a voice note directly from your browser and transcribe it with Groq Whisper."
+        "Runs locally with `.env` — use your own Notion integration and API keys."
     )
 
-    audio_value = st.audio_input(
-        "🎙️ Record your journal entry"
-    )
+
+def render_voice_input() -> None:
+    st.markdown("#### Voice note")
+    st.caption("Record in your browser; audio is sent to Groq for transcription.")
+
+    audio_value = st.audio_input("Record your journal entry")
 
     if audio_value:
+        with open("temp_audio.wav", "wb") as audio_file:
+            audio_file.write(audio_value.read())
 
-        with open("temp_audio.wav", "wb") as f:
-            f.write(audio_value.read())
-
-        with st.spinner("Transcribing audio with Groq Whisper..."):
-
+        with st.spinner("Transcribing with Groq Whisper..."):
             transcription = transcribe_audio("temp_audio.wav")
 
         if not transcription or transcription == TRANSCRIPTION_FAILED_MESSAGE:
-
-            st.error(
-                "Transcription failed. Check the Groq key and network connection."
-            )
-
+            st.error("Transcription failed. Check GROQ_API_KEY in your .env file.")
             return
 
         st.session_state.voice_text = transcription.strip()
-
-        st.success("Transcription ready. Review or edit it before saving.")
+        st.success("Transcription ready — review or edit below.")
 
     if st.session_state.voice_text:
-
         st.markdown(
             f"""
             <div class="transcription-box">
@@ -329,13 +288,14 @@ def render_voice_input():
             unsafe_allow_html=True,
         )
 
-def save_entry(user_input, now):
+
+def save_entry(user_input: str, now: datetime) -> None:
     if not user_input.strip():
         st.warning("Write or record something first.")
         return
 
     try:
-        with st.spinner("Cleaning your journal entry with Gemini..."):
+        with st.spinner("Cleaning entry with Gemini..."):
             result = process_input(user_input)
 
         clean_content = result["text"]
@@ -344,7 +304,7 @@ def save_entry(user_input, now):
         time_now = now.strftime("%H:%M:%S")
         display_ts = now.strftime("%B %d, %Y at %H:%M")
 
-        with st.spinner("Saving the cleaned entry to Notion..."):
+        with st.spinner("Saving to Notion..."):
             add_entry_to_notion(clean_content, today_str, time_now)
 
     except Exception as exc:
@@ -358,9 +318,9 @@ def save_entry(user_input, now):
     st.success("Entry saved to Notion.")
 
 
-def generate_diary():
+def generate_diary() -> None:
     try:
-        with st.spinner("Collecting today's logs and drafting the diary..."):
+        with st.spinner("Generating today's diary from saved logs..."):
             message = generate_or_update_diary()
     except Exception as exc:
         st.error(f"Could not generate the diary: {exc}")
@@ -372,20 +332,20 @@ def generate_diary():
         st.success(message)
 
 
-def render_entry_form(now):
+def render_entry_form(now: datetime) -> None:
     st.markdown("#### Journal entry")
-    st.caption("Write directly, or start from the voice transcription above.")
+    st.caption("Type freely or start from the transcription above.")
 
     with st.form("entry_form", clear_on_submit=False):
         user_input = st.text_area(
             label="Entry",
             value=st.session_state.voice_text,
             height=170,
-            placeholder="Capture what happened today in plain language...",
+            placeholder="What did you work on, learn, or reflect on today?",
             label_visibility="collapsed",
         )
 
-        col_save, col_generate, col_space = st.columns([1, 1.15, 2.4])
+        col_save, col_generate, _ = st.columns([1, 1.15, 2.4])
         with col_save:
             submit_clicked = st.form_submit_button(
                 "Save Entry",
@@ -397,17 +357,14 @@ def render_entry_form(now):
                 "Generate Diary",
                 use_container_width=True,
             )
-        with col_space:
-            st.caption("Saved entries feed the daily diary generator.")
 
     if submit_clicked:
         save_entry(user_input, now)
-
     if generate_clicked:
         generate_diary()
 
 
-def render_saved_entry():
+def render_saved_entry() -> None:
     if not st.session_state.clean_content:
         return
 
@@ -417,7 +374,7 @@ def render_saved_entry():
         <div class="entry-preview">
             <div class="entry-meta">
                 <span>{escape(st.session_state.entry_ts)}</span>
-                <span class="model-badge">Model used: {model_name}</span>
+                <span class="model-badge">Model: {model_name}</span>
             </div>
             <div>{html_text(st.session_state.clean_content)}</div>
         </div>
@@ -426,52 +383,42 @@ def render_saved_entry():
     )
 
 
-def render_today_tab(now):
+def render_today_tab(now: datetime) -> None:
     st.markdown(
-        '<p class="tab-intro">Capture a note, let Gemini clean it, and save the result to Notion.</p>',
+        '<p class="tab-intro">Capture a note, clean it with Gemini, and save it to your Daily Logs database.</p>',
         unsafe_allow_html=True,
     )
 
     with st.container(border=True):
         render_voice_input()
-
     with st.container(border=True):
         render_entry_form(now)
-
     render_saved_entry()
 
 
-def recent_dates(now):
-    dates = [now.date() - timedelta(days=days_ago) for days_ago in range(1, RECENT_DAYS + 1)]
+def recent_dates(now: datetime) -> list:
+    dates = [now.date() - timedelta(days=offset) for offset in range(1, RECENT_DAYS + 1)]
     selected = st.session_state.selected_date
-
     if selected not in dates:
         return [selected, *dates]
-
     return dates
 
 
-def render_date_picker(now):
+def render_date_picker(now: datetime) -> None:
     st.markdown("#### Browse diaries")
-    st.caption("Pick any date or jump through recent diary shortcuts.")
+    st.caption("Select a date or use a recent shortcut.")
 
-    manual_date = st.date_input(
-        "Select diary date",
-        value=st.session_state.selected_date,
-    )
-
+    manual_date = st.date_input("Select diary date", value=st.session_state.selected_date)
     if manual_date != st.session_state.selected_date:
         st.session_state.selected_date = manual_date
         st.rerun()
 
     dates = recent_dates(now)
     labels = [date.strftime("%b %d, %Y") for date in dates]
-    default_idx = dates.index(st.session_state.selected_date)
-
     chosen_label = st.radio(
         "Recent entries",
         options=labels,
-        index=default_idx,
+        index=dates.index(st.session_state.selected_date),
     )
 
     chosen_date = dates[labels.index(chosen_label)]
@@ -480,57 +427,51 @@ def render_date_picker(now):
         st.rerun()
 
 
-def render_diary_reader(selected_date):
-    display_date = selected_date.strftime("%A, %B %d, %Y")
-
-    st.markdown(f"### {display_date}")
+def render_diary_reader(selected_date) -> None:
+    st.markdown(f"### {selected_date.strftime('%A, %B %d, %Y')}")
 
     try:
         diary_content = fetch_diary_by_date(selected_date)
     except Exception as exc:
-        st.error(f"Could not load this diary from Notion: {exc}")
+        st.error(f"Could not load diary: {exc}")
         return
 
     if not diary_content:
-        st.info("No diary entry found for this date. Generate a diary first or choose another day.")
+        st.info("No diary for this date. Save logs and run **Generate Diary** first.")
         return
 
-    word_count = len(str(diary_content).split())
-    st.caption(f"{word_count} words")
+    st.caption(f"{len(str(diary_content).split())} words")
     st.markdown(
         f'<div class="diary-reader">{html_text(diary_content)}</div>',
         unsafe_allow_html=True,
     )
 
 
-def render_past_tab(now):
+def render_past_tab(now: datetime) -> None:
     st.markdown(
-        '<p class="tab-intro">Review generated diary entries stored in the Notion diary database.</p>',
+        '<p class="tab-intro">Read generated diaries from your Daily Diary database.</p>',
         unsafe_allow_html=True,
     )
 
     col_left, col_right = st.columns([1, 2.2], gap="large")
-
     with col_left:
         with st.container(border=True):
             render_date_picker(now)
-
     with col_right:
         with st.container(border=True):
             render_diary_reader(st.session_state.selected_date)
 
 
-def main():
+def main() -> None:
     inject_styles()
     now = datetime.now()
     initialise_session_state(now)
+    render_config_gate()
     render_header(now)
 
     tab_today, tab_past = st.tabs(["Today's Entry", "Past Diaries"])
-
     with tab_today:
         render_today_tab(now)
-
     with tab_past:
         render_past_tab(now)
 
