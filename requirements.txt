@@ -1,0 +1,10 @@
+# Offline local execution (local-llm)
+streamlit>=1.32,<2
+python-dotenv>=1.0,<2
+requests>=2.31,<3
+openai-whisper>=20231117
+sounddevice>=0.4.6
+scipy>=1.11,<2
+
+# Install PyTorch separately for your platform (required by Whisper):
+#   pip install torch
