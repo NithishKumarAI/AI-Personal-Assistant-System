@@ -73,7 +73,7 @@ streamlit run app.py
 | `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama server URL |
 | `OLLAMA_MODEL` | No | `llama3` | Cleanup and diary model |
 | `WHISPER_MODEL` | No | `base` | Local Whisper model |
-| `FFMPEG_PATH` | No | None | Optional FFmpeg path |
+| `FFMPEG_PATH` | Yes on Windows* | None | Folder containing `ffmpeg.exe` (*if ffmpeg is not on PATH) |
 
 ## Runtime Notes
 

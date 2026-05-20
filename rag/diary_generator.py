@@ -9,7 +9,7 @@ import requests
 from core.config import get_ollama_base_url, get_ollama_model
 
 LOGGER = logging.getLogger(__name__)
-REQUEST_TIMEOUT_SECONDS = 120
+REQUEST_TIMEOUT_SECONDS = 60
 
 DIARY_PROMPT = """
 You are writing a personal diary.

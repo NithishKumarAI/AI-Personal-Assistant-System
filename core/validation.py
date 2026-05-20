@@ -6,7 +6,8 @@ import logging
 
 import requests
 
-from core.config import CONFIG_SOURCE, get_ollama_base_url, get_secret
+from core.config import get_ollama_base_url, get_secret
+from core.voice import ffmpeg_executable
 
 LOGGER = logging.getLogger(__name__)
 
@@ -18,8 +19,6 @@ REQUIRED_KEYS = (
 
 
 def _config_hint() -> str:
-    if CONFIG_SOURCE == "streamlit_secrets":
-        return "Streamlit Secrets"
     return "your .env file"
 
 
@@ -31,6 +30,16 @@ def validate_config() -> list[str]:
             issues.append(key)
 
     return issues
+
+
+def check_ffmpeg_available() -> str | None:
+    """Return a warning message if ffmpeg is not available for Whisper."""
+    if ffmpeg_executable():
+        return None
+    return (
+        "ffmpeg not found. Set FFMPEG_PATH in your .env file to the folder "
+        "containing ffmpeg.exe, then restart Streamlit."
+    )
 
 
 def check_ollama_available() -> str | None:

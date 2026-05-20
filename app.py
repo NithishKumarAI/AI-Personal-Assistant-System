@@ -13,6 +13,7 @@ from core.diary_service import generate_or_update_diary
 from core.llm import process_input
 from core.notion import add_entry_to_notion
 from core.validation import (
+    check_ffmpeg_available,
     check_ollama_available,
     format_config_issues,
     validate_config,
@@ -192,6 +193,10 @@ def render_config_gate() -> None:
         st.error(format_config_issues(issues))
         st.info("Copy `.env.example` to `.env`, fill in Notion credentials, then restart.")
         st.stop()
+
+    ffmpeg_issue = check_ffmpeg_available()
+    if ffmpeg_issue:
+        st.warning(f"FFmpeg: {ffmpeg_issue}")
 
     ollama_issue = check_ollama_available()
     if ollama_issue:

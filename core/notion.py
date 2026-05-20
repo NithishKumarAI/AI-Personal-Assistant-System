@@ -6,7 +6,7 @@ import logging
 
 import requests
 
-from core.config import CONFIG_SOURCE, get_secret
+from core.config import get_secret
 
 LOGGER = logging.getLogger(__name__)
 NOTION_VERSION = "2022-06-28"
@@ -15,8 +15,6 @@ NOTION_TITLE_MAX_CHARS = 2000
 
 
 def _config_hint() -> str:
-    if CONFIG_SOURCE == "streamlit_secrets":
-        return "Streamlit Secrets"
     return "your .env file"
 
 
