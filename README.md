@@ -1,28 +1,17 @@
-# AI Diary Assistant - `gemini-local`
+# AI Diary Assistant — `gemini-local`
 
-`gemini-local` is the local runtime branch for running the app with cloud AI APIs. It uses Groq Whisper for transcription, Gemini for cleanup and diary generation, and Notion for storage.
+Local Streamlit runtime using **Groq Whisper** (transcription) and **Gemini** (cleanup + diary generation), with **Notion** storage. Configure everything through `.env` — no deployment files on this branch.
 
-Use this branch if you want to test the cloud AI workflow locally with a `.env` file.
+## Features
 
-## Who Should Use This Branch?
+- Same modern dashboard UI as `main` and `ollama-private`
+- Browser microphone capture → Groq Whisper transcription
+- Gemini cleanup with automatic model fallback
+- Daily diary generation from Notion logs
+- Past diary viewer with date picker
+- Asia/Kolkata timezone for timestamps
 
-- Developers running the app from a local machine
-- Reviewers testing Gemini and Groq integrations
-- Users who want `.env` based setup
-- Anyone who wants a lighter local setup than `ollama-private`
-
-## Runtime Workflow
-
-```text
-voice or text input
-  -> Groq Whisper transcription
-  -> Gemini cleanup via fallback router
-  -> Notion Daily Logs database
-  -> Gemini diary generation
-  -> Notion Daily Diary database
-```
-
-## Setup
+## Quick Start
 
 ```bash
 git clone https://github.com/NithishKumarAI/AI-Personal-Assistant-System.git
@@ -31,16 +20,33 @@ git checkout gemini-local
 
 python -m venv .venv
 .venv\Scripts\activate
-
 pip install -r requirements.txt
 copy .env.example .env
 ```
 
-Fill `.env`, then run:
+Add API keys to `.env`, then:
 
 ```bash
 streamlit run app.py
 ```
+
+## Screenshots
+
+See the [`main`](../../tree/main/doc/screenshots) branch for UI screenshots.
+
+## Architecture
+
+```text
+browser mic or typed text
+  -> Groq Whisper API
+  -> Gemini cleanup (PRIMARY / SECONDARY / TERTIARY fallback)
+  -> Notion Daily Logs
+  -> Gemini diary generation
+  -> Notion Daily Diary
+```
+
+**Cloud APIs:** Groq, Gemini, Notion  
+**Not included:** Docker, Cloud Run, Ollama, local Whisper
 
 ## Environment Variables
 
@@ -48,42 +54,35 @@ streamlit run app.py
 |---|---:|---|
 | `GROQ_API_KEY` | Yes | Groq Whisper transcription |
 | `GEMINI_API_KEY` | Yes | Gemini API access |
-| `PRIMARY_MODEL` | At least one model | First Gemini model |
-| `SECONDARY_MODEL` | Optional | Fallback Gemini model |
-| `TERTIARY_MODEL` | Optional | Fallback Gemini model |
+| `PRIMARY_MODEL` | Yes* | First Gemini model to try |
+| `SECONDARY_MODEL` | No | Fallback model |
+| `TERTIARY_MODEL` | No | Fallback model |
 | `NOTION_API_KEY` | Yes | Notion integration |
-| `DATABASE_ID` | Yes | Notion Daily Logs database |
-| `DAILY_DIARY_DATABASE_ID` | Yes | Notion Daily Diary database |
+| `DATABASE_ID` | Yes | Daily Logs database ID |
+| `DAILY_DIARY_DATABASE_ID` | Yes | Daily Diary database ID |
 
-The Gemini router tries `PRIMARY_MODEL`, `SECONDARY_MODEL`, and `TERTIARY_MODEL` in order.
+\*At least `PRIMARY_MODEL` must be set.
 
-## Runtime Notes
+## API Keys
 
-- Audio is captured with Streamlit and sent to Groq Whisper.
-- Gemini handles journal cleanup and diary generation.
-- Notion stores both daily logs and generated diary entries.
-- Dates are generated with the Asia/Kolkata timezone.
-- This branch uses local `.env` configuration.
-- This branch is intended for local execution.
-
-## Limitations
-
-- Uses cloud AI services.
-- Requires Groq, Gemini, and Notion credentials.
-- Notion is cloud storage.
-- Does not use local Whisper or Ollama.
-- Not the public deployment branch.
+- Groq: [console.groq.com](https://console.groq.com)
+- Gemini: [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+- Notion: [notion.so/my-integrations](https://www.notion.so/my-integrations)
 
 ## Troubleshooting
 
-| Issue | Check |
+| Issue | What to do |
 |---|---|
-| Missing config | Copy `.env.example` to `.env` and fill required values |
-| Transcription failed | Check `GROQ_API_KEY` and browser microphone permission |
-| Gemini fallback failed | Check model names, quota, and `GEMINI_API_KEY` |
-| Notion error | Check database IDs, property names, and integration sharing |
-| No diary found | Save logs first, then generate the diary |
+| Missing config | Copy `.env.example` to `.env`; restart Streamlit |
+| Transcription failed | Check `GROQ_API_KEY`; allow browser mic |
+| Gemini errors | Verify model names and API quota |
+| Notion error | Database IDs + integration sharing |
 
-## Back to Main
+## Other Branches
 
-See the project landing page on [`main`](../../tree/main).
+| Branch | Runtime |
+|---|---|
+| [`main`](../../tree/main) | Cloud Run — Gemini + Groq |
+| [`ollama-private`](../../tree/ollama-private) | Local Ollama + Whisper |
+
+See the [main README](../../tree/main) for deployment details.
