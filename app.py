@@ -1,4 +1,4 @@
-"""Streamlit UI — deployment showcase (main branch)."""
+"""Compact Streamlit UI for the AI Diary Assistant."""
 
 from __future__ import annotations
 
@@ -48,93 +48,31 @@ def inject_styles() -> None:
             }
 
             .block-container {
-                max-width: 1080px;
-                padding-top: 2.5rem;
-                padding-bottom: 3rem;
-            }
-
-            .app-header {
-                display: flex;
-                justify-content: space-between;
-                gap: 1.5rem;
-                align-items: flex-start;
-                margin-bottom: 1rem;
+                max-width: 1180px;
+                padding: 1.25rem 1.5rem 2rem;
             }
 
             .app-header h1 {
-                margin: 0;
-                font-size: 2.45rem;
-                line-height: 1.08;
-                font-weight: 760;
+                margin: 0 0 .2rem 0;
+                font-size: 1.8rem;
+                line-height: 1.15;
+                font-weight: 720;
                 color: var(--text-main);
             }
 
             .subtitle {
-                max-width: 720px;
-                margin: .7rem 0 0 0;
-                color: var(--text-muted);
-                font-size: 1.02rem;
-                line-height: 1.55;
-            }
-
-            .date-pill,
-            .model-badge,
-            .status-pill {
-                border: 1px solid var(--border);
-                background: var(--surface);
-                border-radius: 999px;
-                color: var(--text-muted);
-                display: inline-flex;
-                font-size: .82rem;
-                font-weight: 650;
-                padding: .4rem .72rem;
-                white-space: nowrap;
-            }
-
-            .model-badge {
-                background: var(--accent-soft);
-                border-color: #c8e1df;
-                color: #24585b;
-            }
-
-            .status-pill.ok {
-                border-color: #b7e2cb;
-                background: #edf9f1;
-                color: var(--success);
-            }
-
-            .system-summary {
-                display: grid;
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-                gap: .75rem;
-                margin: 1rem 0 1.15rem 0;
-            }
-
-            .system-summary div {
-                background: var(--surface);
-                border: 1px solid var(--border);
-                border-radius: 10px;
-                padding: .85rem .9rem;
-            }
-
-            .system-summary strong {
-                color: var(--text-main);
-                display: block;
-                font-size: .88rem;
-                margin-bottom: .2rem;
-            }
-
-            .system-summary span {
-                color: var(--text-muted);
-                display: block;
-                font-size: .82rem;
-                line-height: 1.35;
-            }
-
-            .tab-intro {
+                margin: 0 0 1rem 0;
                 color: var(--text-muted);
                 font-size: .95rem;
-                margin: .25rem 0 1rem 0;
+                line-height: 1.4;
+            }
+
+            .section-title {
+                color: var(--text-main);
+                display: block;
+                font-size: .98rem;
+                font-weight: 700;
+                margin: 0 0 .45rem 0;
             }
 
             .transcription-box,
@@ -142,13 +80,30 @@ def inject_styles() -> None:
             .diary-reader {
                 background: var(--surface-soft);
                 border: 1px solid var(--border);
-                border-radius: 10px;
-                line-height: 1.72;
+                border-radius: 8px;
+                line-height: 1.55;
             }
 
-            .transcription-box { margin-top: .9rem; padding: .85rem 1rem; }
-            .entry-preview { margin-top: 1rem; padding: 1rem 1.1rem; }
-            .diary-reader { font-size: 1rem; padding: 1.1rem 1.2rem; }
+            .transcription-box {
+                margin-top: .45rem;
+                max-height: 145px;
+                overflow-y: auto;
+                padding: .7rem .8rem;
+            }
+
+            .entry-preview {
+                margin-top: .75rem;
+                max-height: 180px;
+                overflow-y: auto;
+                padding: .8rem .9rem;
+            }
+
+            .diary-reader {
+                font-size: .95rem;
+                max-height: 520px;
+                overflow-y: auto;
+                padding: .9rem 1rem;
+            }
 
             .entry-meta {
                 align-items: center;
@@ -159,31 +114,48 @@ def inject_styles() -> None:
                 margin-bottom: .75rem;
             }
 
-            .entry-meta span:first-child {
+            .entry-meta span {
                 color: var(--text-muted);
-                font-size: .86rem;
+                font-size: .8rem;
             }
 
-            div[data-testid="stTabs"] [role="tablist"] {
-                border-bottom: 1px solid var(--border);
-                gap: .35rem;
+            .model-badge {
+                background: var(--accent-soft);
+                border: 1px solid #c8e1df;
+                border-radius: 999px;
+                color: #24585b;
+                display: inline-flex;
+                font-size: .76rem;
+                font-weight: 650;
+                padding: .25rem .55rem;
+                white-space: nowrap;
             }
 
-            div[data-testid="stTabs"] [aria-selected="true"] {
-                color: var(--accent);
+            div[data-testid="stVerticalBlockBorderWrapper"] {
+                border-radius: 8px;
             }
 
-            .stTextArea textarea { border-radius: 10px; min-height: 170px; }
+            div[data-testid="stVerticalBlockBorderWrapper"] > div {
+                padding: .8rem .9rem;
+            }
+
+            .stTextArea textarea {
+                border-radius: 8px;
+                min-height: 155px;
+            }
+
             .stButton button, .stFormSubmitButton button {
-                border-radius: 10px;
+                border-radius: 8px;
                 font-weight: 650;
             }
 
+            div[data-testid="stMarkdownContainer"] p {
+                margin-bottom: .45rem;
+            }
+
             @media (max-width: 760px) {
-                .block-container { padding-top: 1.25rem; }
-                .app-header { display: block; }
-                .app-header h1 { font-size: 2rem; }
-                .system-summary { grid-template-columns: 1fr; }
+                .block-container { padding: 1rem .9rem 1.5rem; }
+                .app-header h1 { font-size: 1.55rem; }
             }
         </style>
         """,
@@ -218,50 +190,21 @@ def render_config_gate() -> None:
         )
         st.stop()
 
-    st.markdown(
-        '<span class="status-pill ok">Configuration loaded</span>',
-        unsafe_allow_html=True,
-    )
 
-
-def render_header(now: datetime) -> None:
+def render_header() -> None:
     st.markdown(
         f"""
         <div class="app-header">
-            <div>
-                <h1>{APP_TITLE}</h1>
-                <p class="subtitle">
-                    Portfolio demo: voice or text capture, Gemini cleanup with model
-                    fallback, and Notion-backed daily diary generation.
-                </p>
-            </div>
-            <div class="date-pill">{now.strftime("%A, %B %d, %Y")}</div>
+            <h1>{APP_TITLE}</h1>
+            <p class="subtitle">Record, edit, save, and review daily diary entries.</p>
         </div>
         """,
         unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        """
-        <div class="system-summary">
-            <div><strong>Voice</strong><span>Groq Whisper (browser mic)</span></div>
-            <div><strong>LLM</strong><span>Gemini fallback router</span></div>
-            <div><strong>Storage</strong><span>Demo Notion databases</span></div>
-            <div><strong>Flow</strong><span>Capture → clean → save → summarize</span></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.caption(
-        "Live demo — uses recruiter-facing demo Notion workspaces. "
-        "Do not store personal or sensitive information."
     )
 
 
 def render_voice_input() -> None:
-    st.markdown("#### Voice note")
-    st.caption("Record in your browser; audio is sent to Groq for transcription.")
+    st.markdown('<span class="section-title">Voice input</span>', unsafe_allow_html=True)
 
     audio_value = st.audio_input("Record your journal entry")
 
@@ -277,7 +220,7 @@ def render_voice_input() -> None:
             return
 
         st.session_state.voice_text = transcription.strip()
-        st.success("Transcription ready — review or edit below.")
+        st.success("Transcription ready.")
 
     if st.session_state.voice_text:
         st.markdown(
@@ -335,8 +278,7 @@ def generate_diary() -> None:
 
 
 def render_entry_form(now: datetime) -> None:
-    st.markdown("#### Journal entry")
-    st.caption("Type freely or start from the transcription above.")
+    st.markdown('<span class="section-title">Journal entry</span>', unsafe_allow_html=True)
 
     with st.form("entry_form", clear_on_submit=False):
         user_input = st.text_area(
@@ -347,7 +289,7 @@ def render_entry_form(now: datetime) -> None:
             label_visibility="collapsed",
         )
 
-        col_save, col_generate, _ = st.columns([1, 1.15, 2.4])
+        col_save, col_generate = st.columns(2)
         with col_save:
             submit_clicked = st.form_submit_button(
                 "Save Entry",
@@ -386,11 +328,6 @@ def render_saved_entry() -> None:
 
 
 def render_today_tab(now: datetime) -> None:
-    st.markdown(
-        '<p class="tab-intro">Capture a note, clean it with Gemini, and persist it to the demo log database.</p>',
-        unsafe_allow_html=True,
-    )
-
     with st.container(border=True):
         render_voice_input()
     with st.container(border=True):
@@ -407,8 +344,7 @@ def recent_dates(now: datetime) -> list:
 
 
 def render_date_picker(now: datetime) -> None:
-    st.markdown("#### Browse diaries")
-    st.caption("Select a date or use a recent shortcut.")
+    st.markdown('<span class="section-title">Recent diaries</span>', unsafe_allow_html=True)
 
     manual_date = st.date_input("Select diary date", value=st.session_state.selected_date)
     if manual_date != st.session_state.selected_date:
@@ -421,6 +357,7 @@ def render_date_picker(now: datetime) -> None:
         "Recent entries",
         options=labels,
         index=dates.index(st.session_state.selected_date),
+        horizontal=True,
     )
 
     chosen_date = dates[labels.index(chosen_label)]
@@ -430,7 +367,10 @@ def render_date_picker(now: datetime) -> None:
 
 
 def render_diary_reader(selected_date) -> None:
-    st.markdown(f"### {selected_date.strftime('%A, %B %d, %Y')}")
+    st.markdown(
+        f'<span class="section-title">{selected_date.strftime("%A, %B %d, %Y")}</span>',
+        unsafe_allow_html=True,
+    )
 
     try:
         diary_content = fetch_diary_by_date(selected_date)
@@ -450,18 +390,10 @@ def render_diary_reader(selected_date) -> None:
 
 
 def render_past_tab(now: datetime) -> None:
-    st.markdown(
-        '<p class="tab-intro">Read generated diaries from the demo diary database.</p>',
-        unsafe_allow_html=True,
-    )
-
-    col_left, col_right = st.columns([1, 2.2], gap="large")
-    with col_left:
-        with st.container(border=True):
-            render_date_picker(now)
-    with col_right:
-        with st.container(border=True):
-            render_diary_reader(st.session_state.selected_date)
+    with st.container(border=True):
+        render_date_picker(now)
+    with st.container(border=True):
+        render_diary_reader(st.session_state.selected_date)
 
 
 def main() -> None:
@@ -469,12 +401,12 @@ def main() -> None:
     now = datetime.now()
     initialise_session_state(now)
     render_config_gate()
-    render_header(now)
+    render_header()
 
-    tab_today, tab_past = st.tabs(["Today's Entry", "Past Diaries"])
-    with tab_today:
+    left_col, right_col = st.columns([1.05, .95], gap="medium")
+    with left_col:
         render_today_tab(now)
-    with tab_past:
+    with right_col:
         render_past_tab(now)
 
 
