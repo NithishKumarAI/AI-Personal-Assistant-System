@@ -176,6 +176,17 @@ Required runtime values:
 |- requirements.txt
 ```
 
+## Troubleshooting (main / Cloud Run)
+
+| Issue | Fix |
+|---|---|
+| App won't start | Check Cloud Run env vars or Streamlit secrets |
+| Transcription failed | Verify `GROQ_API_KEY`; allow browser microphone |
+| Gemini errors | Check model env vars and API quota |
+| Notion errors | Verify database IDs and integration access |
+
+Branch guides: [`README.gemini-local.md`](README.gemini-local.md), [`README.ollama-private.md`](README.ollama-private.md).
+
 ## Privacy and Security
 
 - Do not commit `.env`, `.streamlit/secrets.toml`, API keys, Notion tokens, or private diary data.
