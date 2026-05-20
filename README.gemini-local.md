@@ -1,15 +1,15 @@
 # AI Diary Assistant - `gemini-local`
 
-`gemini-local` is the local development branch for running the app with cloud AI services. It uses Groq Whisper for voice transcription, Gemini for text cleanup and diary generation, and Notion for storage.
+`gemini-local` is the local runtime branch for running the app with cloud AI APIs. It uses Groq Whisper for transcription, Gemini for cleanup and diary generation, and Notion for storage.
 
-Use this branch when you want the same AI workflow as `main`, but configured locally with a `.env` file instead of Streamlit Secrets.
+Use this branch if you want to test the cloud AI workflow locally with a `.env` file.
 
-## Who Is This Branch For?
+## Who Should Use This Branch?
 
-- Developers running the app locally
-- Users who want Gemini-based inference without deploying to Streamlit Cloud
-- Reviewers who want to test the cloud API workflow from their own machine
-- Anyone who wants simpler setup than `ollama-private`
+- Developers running the app from a local machine
+- Reviewers testing Gemini and Groq integrations
+- Users who want `.env` based setup
+- Anyone who wants a lighter local setup than `ollama-private`
 
 ## Runtime Workflow
 
@@ -21,12 +21,6 @@ voice or text input
   -> Gemini diary generation
   -> Notion Daily Diary database
 ```
-
-Compared with `main`:
-
-- Same Groq + Gemini + Notion runtime stack
-- Uses `.env` instead of Streamlit Secrets
-- Intended for local execution, not hosted demo deployment
 
 ## Setup
 
@@ -58,37 +52,37 @@ streamlit run app.py
 | `SECONDARY_MODEL` | Optional | Fallback Gemini model |
 | `TERTIARY_MODEL` | Optional | Fallback Gemini model |
 | `NOTION_API_KEY` | Yes | Notion integration |
-| `DATABASE_ID` | Yes | Daily Logs database |
-| `DAILY_DIARY_DATABASE_ID` | Yes | Daily Diary database |
+| `DATABASE_ID` | Yes | Notion Daily Logs database |
+| `DAILY_DIARY_DATABASE_ID` | Yes | Notion Daily Diary database |
 
-The implemented router reads `PRIMARY_MODEL`, `SECONDARY_MODEL`, and `TERTIARY_MODEL` in order.
+The Gemini router tries `PRIMARY_MODEL`, `SECONDARY_MODEL`, and `TERTIARY_MODEL` in order.
 
-## Runtime Architecture Notes
+## Runtime Notes
 
-- `core/voice.py` sends browser-recorded audio to Groq Whisper.
-- `core/model_router.py` configures Gemini and tries the model fallback chain.
-- `core/llm.py` handles entry cleanup prompts.
-- `rag/diary_generator.py` uses the same Gemini routing path for diary generation.
-- `core/notion.py` writes logs and generated diaries to Notion.
+- Audio is captured with Streamlit and sent to Groq Whisper.
+- Gemini handles journal cleanup and diary generation.
+- Notion stores both raw daily logs and generated diary entries.
+- This branch uses local `.env` configuration.
+- This branch is intended for local execution.
 
-## Limitations and Tradeoffs
+## Limitations
 
 - Uses cloud AI services.
+- Requires Groq, Gemini, and Notion credentials.
 - Notion is cloud storage.
-- Requires valid Groq, Gemini, and Notion credentials.
 - Does not use local Whisper or Ollama.
-- Docker and Kubernetes files are not implemented for this branch.
+- Not the public deployment branch.
 
 ## Troubleshooting
 
 | Issue | Check |
 |---|---|
-| Missing configuration | Copy `.env.example` to `.env` and fill required values |
+| Missing config | Copy `.env.example` to `.env` and fill required values |
 | Transcription failed | Check `GROQ_API_KEY` and browser microphone permission |
 | Gemini fallback failed | Check model names, quota, and `GEMINI_API_KEY` |
 | Notion error | Check database IDs, property names, and integration sharing |
-| No diary found | Save logs first, then run diary generation |
+| No diary found | Save logs first, then generate the diary |
 
-## Main Branch
+## Back to Main
 
-Return to the project landing page on [`main`](../../tree/main).
+See the project landing page on [`main`](../../tree/main).

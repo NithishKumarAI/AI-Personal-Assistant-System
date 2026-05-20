@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from html import escape
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 
@@ -398,7 +399,7 @@ def render_past_tab(now: datetime) -> None:
 
 def main() -> None:
     inject_styles()
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
     initialise_session_state(now)
     render_config_gate()
     render_header()

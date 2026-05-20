@@ -1,0 +1,12 @@
+venv
+.venv
+.idea
+.git
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.streamlit/secrets.toml
+temp_audio.wav
+doc
