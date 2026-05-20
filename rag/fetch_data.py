@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -73,7 +74,7 @@ def _extract_title(properties: dict, property_name: str) -> str:
 
 
 def fetch_todays_entries() -> list[str]:
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
     log_database_id = get_secret("DATABASE_ID")
 
     payload = {
