@@ -1,161 +1,99 @@
-# AI Personal Journal — Offline Local LLM (`local-llm`)
+# AI Diary Platform
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Ollama](https://img.shields.io/badge/Ollama-Local_LLM-000000)](https://ollama.com/)
-[![Whisper](https://img.shields.io/badge/Whisper-Local_STT-412991)](https://github.com/openai/whisper)
-[![Notion](https://img.shields.io/badge/Notion-API-000000?logo=notion&logoColor=white)](https://developers.notion.com/)
+[![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Docker](https://img.shields.io/badge/Container-Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Kubernetes](https://img.shields.io/badge/Orchestration-Kubernetes-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**Privacy-first** branch: speech recognition and text processing run **entirely on your machine** via Whisper + Ollama. Only Notion sync uses the network.
+Production-grade, multi-branch AI diary system demonstrating cloud and local inference architectures, voice capture, Notion persistence, and deployment-ready DevOps practices.
 
-> **Branch guide:** [`main`](../../tree/main) = hosted demo (Gemini + Groq), [`gemini-local`](../../tree/gemini-local) = cloud APIs with `.env`, **`local-llm`** = this offline branch.
+## Why this repository
 
----
+- Portfolio-quality AI engineering project with real deployment workflows.
+- Branch strategy designed for both public demo and privacy-first local usage.
+- Clean environment separation to prevent accidental key leakage.
+- Recruiter-friendly documentation and architecture walkthroughs.
 
-## Screenshots
+## Branch strategy
 
-| Today's entry | Past diaries |
-|---------------|--------------|
-| _Add `docs/screenshots/local-today.png`_ | _Add `docs/screenshots/local-past.png`_ |
+| Branch | Positioning | LLM/STT stack | Storage |
+|---|---|---|---|
+| `main` | Public production deployment | Gemini + Groq APIs | Demo Notion databases |
+| `local-ollama` (legacy: `local-llm`) | Fully local, privacy-focused | Ollama Llama 3 + local Whisper | Private Notion databases |
+| `local-gemini` (legacy: `gemini-local`) | Local app, cloud LLM | Gemini API (+ optional Groq) | Private Notion databases |
 
----
+Branch-specific readme documents:
 
-## Architecture
-
-```text
-Microphone / keyboard (app.py)
-        │
-        ▼
-core/voice.py ──────────► Local Whisper + FFmpeg
-        │
-        ▼
-core/llm.py ────────────► Ollama (llama3) — localhost
-        │
-        ▼
-core/notion.py ─────────► Daily Logs DB (cloud)
-        │
-        ▼
-core/diary_service.py ──► rag/* ──► Daily Diary DB
-```
-
-### Execution flow
-
-1. **Record** up to 30 seconds from your machine microphone (or type text).
-2. **Transcribe** with local Whisper (`WHISPER_MODEL`, default `base`).
-3. **Clean** text with Ollama (`OLLAMA_MODEL`, default `llama3`).
-4. **Save** to **Daily Logs** with Python-generated `Date` and `Time`.
-5. **Generate Diary** combines today's logs via Ollama and writes **Daily Diary**.
-
----
-
-## Prerequisites
-
-| Tool | Purpose |
-|------|---------|
-| [Ollama](https://ollama.com/) | Local LLM server |
-| [FFmpeg](https://ffmpeg.org/) | Required by Whisper |
-| Notion integration | Cloud storage for entries |
-| Microphone | Voice capture |
-
-```bash
-ollama pull llama3
-```
-
----
+- `docs/branches/README.main.md`
+- `docs/branches/README.local-ollama.md`
+- `docs/branches/README.local-gemini.md`
 
 ## Quick start
 
 ```bash
-git clone https://github.com/NithishKumarAI/AI-Personal-Assistant-System.git
+git clone https://github.com/<your-username>/AI-Personal-Assistant-System.git
 cd AI-Personal-Assistant-System
-git checkout local-llm
+git checkout local-ollama
 
 python -m venv .venv
 .venv\Scripts\activate
-pip install torch
 pip install -r requirements.txt
 
-copy .env.example .env
-# Edit .env
-
+copy env\.env.local-ollama.example .env
 streamlit run app.py
 ```
 
----
+## Architecture and docs
 
-## Notion database setup
+- Platform architecture: `docs/architecture/overview.md`
+- Setup and environment model: `docs/setup/setup.md`
+- Docker docs: `docs/deployment/docker/README.md`
+- Kubernetes docs: `docs/deployment/kubernetes/README.md`
+- Branch operations guide: `docs/operations/branching-and-release.md`
 
-### Daily Logs DB
+## Screenshots
 
-| Property | Type |
-|----------|------|
-| `Content` | **Title** |
-| `Date` | **Date** |
-| `Time` | **Rich text** |
+Add images before sharing publicly:
 
-### Daily Diary DB
+- `docs/screenshots/dashboard-home.png`
+- `docs/screenshots/voice-capture.png`
+- `docs/screenshots/diary-output.png`
+- `docs/screenshots/k8s-deployment.png`
 
-| Property | Type |
-|----------|------|
-| `Diary` | **Title** |
-| `Date` | **Date** |
-
-Property names are **case-sensitive**.
-
----
-
-## Environment variables (`.env`)
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `NOTION_API_KEY` | Yes | — | Integration token |
-| `DATABASE_ID` | Yes | — | Daily Logs database ID |
-| `DAILY_DIARY_DATABASE_ID` | Yes | — | Daily Diary database ID |
-| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama API URL |
-| `OLLAMA_MODEL` | No | `llama3` | Model name |
-| `FFMPEG_PATH` | No | — | Folder containing `ffmpeg` binary |
-| `WHISPER_MODEL` | No | `base` | Whisper model size |
-
----
-
-## Project structure
+## Recommended repository layout
 
 ```text
-app.py
-core/config.py
-core/validation.py       Includes Ollama health check
-core/voice.py            Mic + Whisper
-core/llm.py              Ollama cleanup
-core/notion.py
-core/diary_service.py
-rag/fetch_data.py
-rag/combine_logs.py
-rag/diary_generator.py   Ollama diary prompt
-auto_diary.py
+.
+├─ app.py
+├─ core/
+├─ rag/
+├─ docs/
+│  ├─ architecture/
+│  ├─ branches/
+│  ├─ deployment/
+│  │  ├─ docker/
+│  │  └─ kubernetes/
+│  ├─ operations/
+│  ├─ setup/
+│  └─ screenshots/
+├─ env/
+│  ├─ .env.main.example
+│  ├─ .env.local-ollama.example
+│  └─ .env.local-gemini.example
+├─ Dockerfile
+├─ .dockerignore
+├─ .env.example
+└─ README.md
 ```
 
----
+## Security and secret hygiene
 
-## CLI
-
-```bash
-python auto_diary.py
-```
-
----
-
-## Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| Ollama warning on startup | Run `ollama serve`; `ollama pull llama3` |
-| FFmpeg / Whisper error | Install FFmpeg; set `FFMPEG_PATH` if not on PATH |
-| Recording failed | Allow microphone access; close other apps using the mic |
-| Notion errors | Verify database IDs and exact property names |
-| Slow first transcription | Whisper loads on first use — subsequent runs are faster |
-| `torch` not found | `pip install torch` before other requirements |
-
----
+- Never commit `.env`, `*.pem`, `*.key`, or `secrets.toml`.
+- Commit only template files from `env/*.example`.
+- Rotate keys immediately if exposed in commits or logs.
+- Use separate API keys and Notion databases per branch/environment.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see `LICENSE`.
