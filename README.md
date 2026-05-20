@@ -1,42 +1,18 @@
-# AI Diary Assistant - `ollama-private`
+# AI Diary Assistant — `ollama-private`
 
-`ollama-private` is the privacy-focused local runtime branch. It uses local Whisper for transcription and Ollama + Llama3 for journal cleanup and diary generation. Notion is still used for storage.
+Privacy-focused local runtime: **local Whisper** transcription, **Ollama (Llama 3)** for text cleanup and diary generation, **Notion** for storage only.
 
-Use this branch if you want transcription and AI inference to run on your machine instead of sending journal text to Gemini or Groq.
+## Features
 
-## Who Should Use This Branch?
+- Modern Streamlit dashboard (same UI as other branches)
+- 30-second microphone recording
+- Local Whisper speech-to-text
+- Ollama-powered journal cleanup
+- One-click daily diary generation from today's logs
+- Past diary viewer with date picker
+- Asia/Kolkata timezone for log timestamps
 
-- Users who prefer local AI inference
-- Developers testing local-first AI workflows
-- Users comfortable installing Ollama, Whisper dependencies, FFmpeg, and PyTorch
-- Anyone who wants to keep AI processing local while still using Notion for persistence
-
-## Runtime Workflow
-
-```text
-microphone recording or text input
-  -> local Whisper transcription
-  -> Ollama cleanup
-  -> Notion Daily Logs database
-  -> Ollama diary generation
-  -> Notion Daily Diary database
-```
-
-Cloud boundary:
-
-- AI inference runs locally through Ollama.
-- Speech transcription runs locally through Whisper.
-- Notion remains cloud storage.
-
-## Setup
-
-Install Ollama and pull the default model:
-
-```bash
-ollama pull llama3
-```
-
-Set up the app:
+## Quick Start
 
 ```bash
 git clone https://github.com/NithishKumarAI/AI-Personal-Assistant-System.git
@@ -45,74 +21,180 @@ git checkout ollama-private
 
 python -m venv .venv
 .venv\Scripts\activate
-
 pip install torch
 pip install -r requirements.txt
 copy .env.example .env
 ```
 
-Start Ollama if needed:
-
-```bash
-ollama serve
-```
-
-Run Streamlit:
+Then complete [Full Setup](#full-setup) below and run:
 
 ```bash
 streamlit run app.py
 ```
 
-## Environment Variables
+## Screenshots
+
+UI screenshots are maintained on the [`main`](../../tree/main/doc/screenshots) branch:
+
+- [Dashboard](../../tree/main/doc/screenshots/main-dashboard.png)
+- [Voice recording](../../tree/main/doc/screenshots/voice-recording.png)
+- [Transcription](../../tree/main/doc/screenshots/transcription-output.png)
+- [Journal entry](../../tree/main/doc/screenshots/journal-entry.png)
+- [Diary viewer](../../tree/main/doc/screenshots/diary-viewer.png)
+
+## Architecture
+
+```text
+microphone or typed text
+  -> local Whisper (ffmpeg required)
+  -> Ollama cleanup (llama3)
+  -> Notion Daily Logs
+  -> Ollama diary synthesis
+  -> Notion Daily Diary
+```
+
+**Local:** microphone, Whisper, Ollama  
+**Cloud:** Notion storage only (no Gemini, no Groq)
+
+## Full Setup
+
+### 1. Install Ollama
+
+Download and install from [https://ollama.com](https://ollama.com).
+
+Start the server (keep this terminal open):
+
+```bash
+ollama serve
+```
+
+In another terminal, pull the default model:
+
+```bash
+ollama pull llama3
+```
+
+Verify:
+
+```bash
+ollama list
+```
+
+You should see `llama3` in the list.
+
+### 2. Install FFmpeg (required for Whisper)
+
+Whisper calls `ffmpeg` as a subprocess. On Windows, if `ffmpeg` is not on your PATH, set `FFMPEG_PATH` in `.env`.
+
+1. Download an FFmpeg essentials build (for example from [https://www.gyan.dev/ffmpeg/builds/](https://www.gyan.dev/ffmpeg/builds/)).
+2. Extract the archive.
+3. Set `FFMPEG_PATH` to the folder that contains `ffmpeg.exe` (usually the `bin` folder).
+
+Example:
+
+```env
+FFMPEG_PATH=C:\Users\you\Downloads\ffmpeg-...\bin
+```
+
+Confirm `ffmpeg.exe` exists inside that folder.
+
+### 3. Configure `.env`
+
+```bash
+copy .env.example .env
+```
 
 | Variable | Required | Default | Purpose |
 |---|---:|---|---|
-| `NOTION_API_KEY` | Yes | None | Notion integration |
-| `DATABASE_ID` | Yes | None | Notion Daily Logs database |
-| `DAILY_DIARY_DATABASE_ID` | Yes | None | Notion Daily Diary database |
-| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama server URL |
-| `OLLAMA_MODEL` | No | `llama3` | Cleanup and diary model |
-| `WHISPER_MODEL` | No | `base` | Local Whisper model |
-| `FFMPEG_PATH` | Yes on Windows* | None | Folder containing `ffmpeg.exe` (*if ffmpeg is not on PATH) |
+| `NOTION_API_KEY` | Yes | — | Notion integration token |
+| `DATABASE_ID` | Yes | — | Daily Logs database ID |
+| `DAILY_DIARY_DATABASE_ID` | Yes | — | Daily Diary database ID |
+| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama API URL |
+| `OLLAMA_MODEL` | No | `llama3` | Model for cleanup and diary |
+| `WHISPER_MODEL` | No | `base` | Whisper model size |
+| `FFMPEG_PATH` | Yes on Windows* | — | Folder with `ffmpeg.exe` |
 
-## Runtime Notes
+\*Required on Windows when `ffmpeg` is not already on PATH.
 
-- `sounddevice` records local microphone audio.
-- Whisper transcribes `temp_audio.wav` locally.
-- Ollama handles cleanup and diary generation through `/api/generate`.
-- Notion stores logs and generated diaries.
-- Dates are generated with the Asia/Kolkata timezone.
-- The branch is local-first, but not fully offline because Notion is external storage.
+### 4. Install Python dependencies
 
-## Dependencies
+```bash
+pip install torch
+pip install -r requirements.txt
+```
 
-- Ollama
-- Llama3 model
-- FFmpeg
-- PyTorch
-- Working microphone
-- Python packages from `requirements.txt`
+PyTorch is required by Whisper and is installed separately because it varies by platform.
 
-## Limitations
+### 5. Run the app
 
-- Notion remains cloud storage.
-- Ollama must be running separately.
-- Local transcription depends on FFmpeg, PyTorch, and Whisper model availability.
-- Recording depends on local microphone permissions.
-- Gemini fallback routing is not used on this branch.
-- This branch focuses on local private inference.
+```bash
+streamlit run app.py
+```
+
+On startup, the app warns if Ollama or FFmpeg is unreachable before you record audio.
+
+## Optional CLI
+
+Generate today's diary without opening the UI:
+
+```bash
+python auto_diary.py
+```
+
+This runs the same logic as **Generate Diary** in the app.
+
+## Notion Database Schema
+
+**Daily Logs**
+
+| Property | Type |
+|---|---|
+| `Content` | Title |
+| `Date` | Date |
+| `Time` | Rich text |
+
+**Daily Diary**
+
+| Property | Type |
+|---|---|
+| `Diary` | Title |
+| `Date` | Date |
+
+Property names are case-sensitive. Share both databases with your Notion integration.
 
 ## Troubleshooting
 
-| Issue | Check |
+| Issue | What to do |
 |---|---|
-| Missing config | Confirm `.env` contains Notion variables |
-| Ollama unavailable | Start Ollama and pull the configured model |
-| Whisper fails | Check FFmpeg, PyTorch, and `WHISPER_MODEL` |
-| Recording fails | Check OS microphone permissions |
-| Notion error | Check database IDs, property names, and integration sharing |
-| Empty diary | Save logs for today before generating a diary |
+| **FFmpeg / WinError 2** | Set `FFMPEG_PATH` to the `bin` folder containing `ffmpeg.exe`. Restart Streamlit. |
+| **Ollama unavailable** | Run `ollama serve`, then `ollama pull llama3`. Confirm `OLLAMA_BASE_URL` in `.env`. |
+| **Whisper slow on first run** | First transcription downloads/loads the model; later runs are faster. |
+| **Empty transcription** | Speak closer to the mic; check `temp_audio.wav` was created after recording. |
+| **Recording failed** | Allow microphone access in Windows privacy settings; close other apps using the mic. |
+| **Missing config** | Copy `.env.example` to `.env` and fill all Notion variables. |
+| **Notion API error** | Verify database IDs, integration access, and exact property names. |
+| **No diary generated** | Save at least one log for today, then click **Generate Diary**. |
+| **`.env` not picked up** | Run Streamlit from the repo root, or restart after editing `.env`. |
 
-## Back to Main
+## Project Layout
 
-See the project landing page on [`main`](../../tree/main).
+```text
+app.py                 Streamlit UI
+auto_diary.py          CLI diary generation
+core/config.py         .env loading
+core/voice.py          Mic + Whisper + ffmpeg
+core/llm.py            Ollama cleanup
+core/diary_service.py  Diary workflow
+core/notion.py         Notion writes
+core/validation.py     Startup checks
+rag/                   Notion reads + diary prompt
+```
+
+## Other Branches
+
+| Branch | Runtime |
+|---|---|
+| [`main`](../../tree/main) | Cloud Run deployment — Gemini + Groq |
+| [`gemini-local`](../../tree/gemini-local) | Local app — Gemini + Groq via `.env` |
+
+See the [main README](../../tree/main) for the full multi-branch overview.
