@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from core.notion import add_daily_diary, update_daily_diary
 from rag.combine_logs import combine_logs
@@ -14,7 +15,7 @@ def generate_or_update_diary() -> str:
 
     combined_logs = combine_logs(logs)
     diary = generate_diary(combined_logs)
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d")
     existing_page_id = get_diary_page_by_date(today)
 
     if existing_page_id:

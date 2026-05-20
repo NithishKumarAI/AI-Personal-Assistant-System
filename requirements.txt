@@ -1,4 +1,4 @@
-# Offline local execution (local-llm)
+# Offline local execution (ollama-private)
 streamlit>=1.32,<2
 python-dotenv>=1.0,<2
 requests>=2.31,<3
